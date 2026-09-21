@@ -9,13 +9,14 @@ using System.Text.RegularExpressions;
 namespace Amiin;
 
 public record Package(string version, string url, string sha256, long size, string entry);
-public record Manifest(string channel, long revision, string notes, Package launcher, Package game);
+public record GameEntry(string id, string title, string tagline, int protocol, Package package);
+public record Manifest(string channel, long revision, string notes, Package launcher, List<GameEntry> games);
 public record Envelope(string payload, string signature);
 public record Configuration(string api, string publicKey, bool development = false);
 
 public static class Updates
 {
-    public const string Version = "0.1.0";
+    public const string Version = "0.2.0";
     public static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AmiinStudio");
     public static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
     public static readonly HttpClient Http = new(new HttpClientHandler { AllowAutoRedirect = true }) { Timeout = TimeSpan.FromMinutes(20) };
@@ -39,19 +40,20 @@ public static class Updates
         if (!rsa.VerifyData(raw, Convert.FromBase64String(signed.signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
             throw new Exception("Release signature is invalid. Nothing was installed.");
         var manifest = JsonSerializer.Deserialize<Manifest>(raw, Json) ?? throw new Exception("Invalid manifest.");
-        if (manifest.channel != channel || manifest.revision < 1) throw new Exception("Wrong release channel.");
-        SafeName(channel); SafeName(manifest.launcher.version); SafeName(manifest.game.version);
+        if (manifest.channel != channel || manifest.revision < 1 || manifest.games.Count == 0) throw new Exception("Wrong release channel.");
+        SafeName(channel); SafeName(manifest.launcher.version);
+        foreach (var entry in manifest.games) SafeName(entry.package.version);
         return manifest;
     }
-    public static string ActionFor(Manifest release, string launcher, string? game)
-        => release.launcher.version != launcher ? "launcher" : release.game.version != game ? "game" : "play";
+    public static string ActionFor(Manifest release, string launcherVersion, GameEntry selected, string? installedGameVersion)
+        => release.launcher.version != launcherVersion ? "launcher" : selected.package.version != installedGameVersion ? "game" : "play";
 
-    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress)
+    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress, string slot = "")
     {
-        SafeName(package.version); SafeName(channel);
+        SafeName(package.version); SafeName(channel); if (slot.Length > 0) SafeName(slot);
         if (kind != "launcher" && kind != "game") throw new Exception("Invalid package type.");
         if (package.size <= 0 || package.size > 16L * 1024 * 1024 * 1024 || !Regex.IsMatch(package.sha256, "^[a-fA-F0-9]{64}$")) throw new Exception("Invalid package metadata.");
-        var folder = Path.Combine(Root, kind, channel);
+        var folder = slot.Length > 0 ? Path.Combine(Root, kind, channel, slot) : Path.Combine(Root, kind, channel);
         Directory.CreateDirectory(folder);
         var destination = Path.Combine(folder, package.version + "-" + package.sha256[..12]);
         var archive = Path.Combine(folder, Guid.NewGuid()+".download");
@@ -120,9 +122,9 @@ public static class Updates
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path+".tmp",value); File.Move(path+".tmp",path,true);
     }
-    public static (Package?,string?) Installed(string kind,string channel)
+    public static (Package?,string?) Installed(string kind,string channel,string slot = "")
     {
-        var parent = Path.Combine(Root,kind,channel); var pointer=Path.Combine(parent,"active.txt");
+        var parent = slot.Length > 0 ? Path.Combine(Root,kind,channel,slot) : Path.Combine(Root,kind,channel); var pointer=Path.Combine(parent,"active.txt");
         if (!File.Exists(pointer)) return (null,null);
         var folder=File.ReadAllText(pointer).Trim(); SafeName(folder);
         var path=Path.Combine(parent,folder);

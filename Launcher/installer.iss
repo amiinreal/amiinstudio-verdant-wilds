@@ -3,10 +3,10 @@
 ; installer for first-time downloads. In-app auto-updates still use the plain
 ; zip via Updates.cs -- this installer is only the first-run experience.
 #define MyAppName "Amiin Studio Launcher"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "Amiin Studio"
 #define MyAppExeName "AmiinLauncher.exe"
-#define SourceDir "..\Releases\launcher-0.1.0"
+#define SourceDir "..\Releases\launcher-0.2.0"
 
 [Setup]
 AppId={{6C6F5E1E-6B0D-4A9E-9B1A-3E3B9F0C4B21}

@@ -227,16 +227,23 @@ def release(channel: str, request: Request):
 
 class Build(BaseModel):
     channel: str = Field(default="public", pattern=r"^[a-z0-9-]{1,32}$")
+    game_id: str = Field(default="verdant-wilds", pattern=r"^[a-z0-9-]{1,32}$")
     version: str = Field(max_length=64)
     protocol: int = 1
 
 
+def find_game(manifest, game_id):
+    return next((g for g in manifest.get("games", []) if g["id"] == game_id), None)
+
+
 def check_build(user, build):
     allow_channel(user["id"], build.channel)
-    rows = query("SELECT game_version,protocol FROM releases WHERE channel=:c", c=build.channel)
     if DEV and build.version == "dev":
         return
-    if not rows or rows[0]["game_version"] != build.version or rows[0]["protocol"] != build.protocol:
+    rows = query("SELECT envelope FROM releases WHERE channel=:c", c=build.channel)
+    manifest = json.loads(base64.b64decode(json.loads(rows[0]["envelope"])["payload"])) if rows else None
+    game = find_game(manifest, build.game_id) if manifest else None
+    if not game or game["package"]["version"] != build.version or game["protocol"] != build.protocol:
         raise HTTPException(409, "Update your game in the launcher before playing online.")
 
 
@@ -384,15 +391,19 @@ def landing():
     if rows:
         manifest = json.loads(base64.b64decode(json.loads(rows[0]["envelope"])["payload"]))
         download_url = manifest.get("installer_url") or manifest["launcher"]["url"]
+        games_html = "".join(
+            f"<p style='color:#80988d;font-size:15px'>{g['title']} v{g['package']['version']} &middot; {g.get('tagline','')}</p>"
+            for g in manifest.get("games", [])
+        )
         downloads = (
             f"<p><a href='{download_url}' style='color:#f1e8cd'>Download the launcher</a> "
-            f"(v{manifest['launcher']['version']}, Windows) &mdash; installs and updates the game for you.</p>"
-            f"<p style='color:#80988d;font-size:15px'>Game v{manifest['game']['version']} &middot; {manifest.get('notes','')}</p>"
+            f"(v{manifest['launcher']['version']}, Windows) &mdash; installs and updates your games for you.</p>"
+            + games_html
         )
     return HTMLResponse(
         "<html><title>Amiin Studio</title><body style='background:#102823;color:#f1e8cd;font:20px system-ui;"
-        "max-width:800px;margin:100px auto;padding:0 20px'><p>AMIIN STUDIO</p><h1>The Verdant Wilds</h1>"
-        "<p>Gather. Build. Explore together.</p>" + downloads +
+        "max-width:800px;margin:100px auto;padding:0 20px'><p>AMIIN STUDIO</p><h1>Amiin Studio Launcher</h1>"
+        "<p>One launcher. Your games, your worlds, your friends.</p>" + downloads +
         "<p style='color:#80988d;font-size:14px'>Create a free account in the launcher, then host or join an "
         "expedition with an invite code.</p></body></html>"
     )
