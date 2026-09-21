@@ -21,16 +21,25 @@ from argon2.exceptions import VerificationError
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
 DB_URL = os.environ.get("DATABASE_URL", "sqlite:///amiin.db")
-if DB_URL.startswith(("postgres://", "postgresql://")):
+IS_POSTGRES = DB_URL.startswith(("postgres://", "postgresql://"))
+if IS_POSTGRES:
     DB_URL = "postgresql+psycopg://" + DB_URL.split("://", 1)[1]
 db = create_engine(DB_URL, pool_pre_ping=True)
+if IS_POSTGRES:
+    # Keeps this service's tables in their own schema, separate from any other
+    # app (e.g. the studio website) sharing the same Postgres project.
+    @event.listens_for(db, "connect")
+    def _set_search_path(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("SET search_path TO game, public")
+        cursor.close()
 with db.begin() as c:
-    for sql in [
+    for sql in (["CREATE SCHEMA IF NOT EXISTS game"] if IS_POSTGRES else []) + [
         "CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, password TEXT NOT NULL, recovery TEXT NOT NULL)",
         "CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires BIGINT NOT NULL, scope TEXT NOT NULL)",
         "CREATE TABLE IF NOT EXISTS grants (account TEXT NOT NULL, channel TEXT NOT NULL, PRIMARY KEY(account,channel))",
