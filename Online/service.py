@@ -4,6 +4,7 @@ Persistent state uses SQLite locally or PostgreSQL on Supabase. Worlds remain
 on the host's computer. No credentials or world packets are written to logs.
 """
 import asyncio
+import base64
 import hashlib
 import json
 import os
@@ -369,7 +370,22 @@ def health():
 
 @app.get("/")
 def landing():
-    return HTMLResponse("<html><title>Amiin Studio</title><body style='background:#102823;color:#f1e8cd;font:20px system-ui;max-width:800px;margin:100px auto'><p>AMIIN STUDIO</p><h1>The Verdant Wilds</h1><p>Gather. Build. Explore together.</p><p>Online service is running. Download links appear when a release is published.</p></body></html>")
+    rows = query("SELECT envelope FROM releases WHERE channel='public'")
+    downloads = "<p>No build has been published yet. Check back soon.</p>"
+    if rows:
+        manifest = json.loads(base64.b64decode(json.loads(rows[0]["envelope"])["payload"]))
+        downloads = (
+            f"<p><a href='{manifest['launcher']['url']}' style='color:#f1e8cd'>Download the launcher</a> "
+            f"(v{manifest['launcher']['version']}, Windows) &mdash; installs and updates the game for you.</p>"
+            f"<p style='color:#80988d;font-size:15px'>Game v{manifest['game']['version']} &middot; {manifest.get('notes','')}</p>"
+        )
+    return HTMLResponse(
+        "<html><title>Amiin Studio</title><body style='background:#102823;color:#f1e8cd;font:20px system-ui;"
+        "max-width:800px;margin:100px auto;padding:0 20px'><p>AMIIN STUDIO</p><h1>The Verdant Wilds</h1>"
+        "<p>Gather. Build. Explore together.</p>" + downloads +
+        "<p style='color:#80988d;font-size:14px'>Create a free account in the launcher, then host or join an "
+        "expedition with an invite code.</p></body></html>"
+    )
 
 
 if DEV:

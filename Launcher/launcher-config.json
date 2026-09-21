@@ -1,5 +1,5 @@
 {
-  "api": "http://127.0.0.1:18766",
-  "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAm++XAhD5aJ4WQFh8Th/B\nc8WPqXd7/TYlD9ur8f0CgMlWKsY7oswfoAafo8tIvgz6siNQdkInCmUFPuqqxMhy\nbZv5/MwgEYvt5keHl1LbffWPcORxCkbWG9gMU5++u2D8mA4hjlfedOFNUkDYvU80\nU4ltRR3B43AtteeExWDY/TNhokBUmhjMD8u92rf7Ws9qgXi6zSIhwst0WXVbPfHL\nnCzT0ReShmJh0IdrATJFNTmDoz2vHLzr5gLjOGGHwEW65VcDJO6mPm6gd3FRkHWw\nQZ1TKhCGIhlI+QSc+23RvMGA+osa36jbTxUM+DlKLbZKaOwCXnpL46yQkm1ZZxtU\n9y5uLPGoUfOPeFlLk7xWDNEqyZm/2Gw9qXG4pE4wA0c8OtD/S9yeIbz1xJ5ZYNpm\nzDiYJTmQvSzcnJEI5kbk2FJzuwN+9s9/zytoL9fsYAOsg5ZZPwBn6WxGoajAj9yV\nlPecTyfhVG8wjbBNwey0M+M58R8cwHMUbQJ9t6qJJO1PAgMBAAE=\n-----END PUBLIC KEY-----\n",
-  "development": true
+  "api": "https://amiin-online.onrender.com",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxlTj7cN40g0tLkeZ7l71\n801cPL0APkiJ5IkvYMVXyfw7XQ8CBk1/qwbc5kvGXJdJhRXzvqlcO0MvJ8RHWBCL\ncfwm01ijUIupx+XxaL4no8dp9imAiPoH5VgMtVsgSBXKW9aBaIW7Qg2gJW92N1mJ\n2g/Viz3585YZVMDj5l2FzJH3xUkeAq6Bd6bERWcYDL8NOVwT8gc8Zf91LebuD8HG\nspj61Lo5Yvc6vFwbwzTSjNi4UEnHkwsiT4XI67RPVII26rt+3ARQevrVV4MrkAkS\n9iOFa0fG++tjm5PrOx59FKmSJSYIGGasBW7XoqwW7x8r9iNl5ccXRuepm7SWIzyY\n3hPIY5JhDJatHMfmSJAz1FUWxGRKHPTSnxBm1vvLZ2owxv/uEz2tu7m7vnxm7vVp\noSLzW4JjqlQODxww80wNvEns6Rc8msCborsgI9W/U339xYbQm+aav5kkOtcHaYLa\nLe87pl5SSU8QcZ6oWtMsiqKFx1Q7LNnIN7B5rV2BNudVAgMBAAE=\n-----END PUBLIC KEY-----\n",
+  "development": false
 }
