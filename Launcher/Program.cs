@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -24,7 +25,14 @@ public class Program
         var installed=Updates.Installed("launcher","public");
         if (installed.Item2 is string current && !Path.GetFullPath(Environment.ProcessPath!).Equals(current,StringComparison.OrdinalIgnoreCase))
         {
-            Process.Start(new ProcessStartInfo(current){UseShellExecute=true}); return;
+            try { Process.Start(new ProcessStartInfo(current){UseShellExecute=true}); }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                MessageBox.Show("Windows blocked the installed launcher from running (its publisher isn't recognized yet). " +
+                    "Open Windows Security → App & browser control → Smart App Control and check its status.\n\n" + ex.Message,
+                    "Amiin Studio Launcher");
+            }
+            return;
         }
         using var mutex=new Mutex(true,"Local\\AmiinStudioLauncher",out bool owned);
         if (!owned) { MessageBox.Show("Amiin Launcher is already open."); return; }
@@ -225,6 +233,20 @@ public class LauncherWindow : Window
         finally { working = false; play.IsEnabled = true; channels.IsEnabled = true; progress.IsIndeterminate = false; }
     }
 
+    // Windows (Smart App Control / WDAC / SmartScreen) can silently refuse to start an
+    // unsigned or not-yet-reputable executable. Without this, that surfaced as an opaque
+    // "Object reference not set to an instance of an object" further down the call chain.
+    static void SafeStart(ProcessStartInfo info)
+    {
+        try { Process.Start(info); }
+        catch (Win32Exception ex)
+        {
+            throw new Exception("Windows blocked this file from running (its publisher isn't recognized yet). " +
+                "Open Windows Security → App & browser control → Smart App Control and check its status, " +
+                "or right-click the downloaded file → Properties → Unblock. (" + ex.Message + ")");
+        }
+    }
+
     async Task<JsonElement> Api(string path, object? body = null, string? bearer = null)
     {
         if (config is null) throw new Exception("Online service is not configured yet.");
@@ -363,7 +385,7 @@ public class LauncherWindow : Window
         {
             status.Text = "Launcher update required first. The game update will follow after restart.";
             var exe = await Updates.Install(release.launcher, "launcher", "public", config.development, reporter);
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId }); Close(); return;
+            SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId }); Close(); return;
         }
         string gamePath;
         if (action == "game" || installed.Item1?.sha256 != game.package.sha256) gamePath = await Updates.Install(game.package, "game", channel, config.development, reporter, game.id);
@@ -378,7 +400,7 @@ public class LauncherWindow : Window
         start.Environment["AMIIN_LAUNCH_TICKET"] = ticket.GetProperty("ticket").GetString();
         var pack = Path.Combine(start.WorkingDirectory, Path.GetFileNameWithoutExtension(game.package.entry) + ".pck");
         if (File.Exists(pack)) { start.ArgumentList.Add("--main-pack"); start.ArgumentList.Add(pack); }
-        Process.Start(start); status.Text = chosen.title + " launched. Host a world to get your invite code.";
+        SafeStart(start); status.Text = chosen.title + " launched. Host a world to get your invite code.";
         SelectGame(chosen);
     }
 }
