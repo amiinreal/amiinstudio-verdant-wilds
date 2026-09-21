@@ -383,8 +383,9 @@ def landing():
     downloads = "<p>No build has been published yet. Check back soon.</p>"
     if rows:
         manifest = json.loads(base64.b64decode(json.loads(rows[0]["envelope"])["payload"]))
+        download_url = manifest.get("installer_url") or manifest["launcher"]["url"]
         downloads = (
-            f"<p><a href='{manifest['launcher']['url']}' style='color:#f1e8cd'>Download the launcher</a> "
+            f"<p><a href='{download_url}' style='color:#f1e8cd'>Download the launcher</a> "
             f"(v{manifest['launcher']['version']}, Windows) &mdash; installs and updates the game for you.</p>"
             f"<p style='color:#80988d;font-size:15px'>Game v{manifest['game']['version']} &middot; {manifest.get('notes','')}</p>"
         )
