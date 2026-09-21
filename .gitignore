@@ -1,0 +1,22 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Built release packages (too large for git; published as GitHub Release assets instead)
+/Releases/
+
+# .NET build output
+Launcher/bin/
+Launcher/obj/
+Launcher/build/
+
+# Local test/QA logs
+Adventure/qa/
+
+# Secrets and local artifacts (also covered by Online/.gitignore)
+*.pem
+.env
+__pycache__/
+.pytest_cache/
+*.db
+*.db-*

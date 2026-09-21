@@ -1,0 +1,7 @@
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
+ERROR: Failed to read the root certificate store.
+   at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)
+Resonant Wilds | seed 73129 | { "trees": 300, "rocks": 199, "plants": 4684, "instances": 5052, "batches": 490, "milliseconds": 838 }
+Resonant Wilds | seed 42 | { "trees": 314, "rocks": 212, "plants": 4701, "instances": 5083, "batches": 502, "milliseconds": 751 }
+PREVIEW VALIDATION PASSED | 0 failures | camera modes, standing/walking collision, bell, seed input

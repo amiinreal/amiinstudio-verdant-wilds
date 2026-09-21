@@ -1,0 +1,34 @@
+[
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\project.godot",
+    "Hash": "B52762BAB9EF7053751982947F42DBCD5161549910FF4BCC9CEC0D18BF9B9055"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scenes\\player.tscn",
+    "Hash": "22B24C541B1016578FA5C85053634E3F83659A04A3089F71A7E6D71CAD84D5DF"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scenes\\player.tscn2023734079.tmp",
+    "Hash": "0CC3D2B55EEE6241BC351835CF70D6FF142A3868F93026E5348A1B7428FCC211"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scenes\\start.tscn",
+    "Hash": "72BAA45C7D5AA1C59B54824E1FBD6DF6FBD64D448CF1B4947F52BF92882AF313"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scripts\\camera_rig.gd",
+    "Hash": "32329AFD4749B14BF3C5821D01237099B42D49FF9678140640E4734E8E5AB537"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scripts\\camera_rig.gd.uid",
+    "Hash": "28DC73CB910F4E6DB6BBD46FA4BEE8D8122415745058E1F048895C08351B1434"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scripts\\player.gd",
+    "Hash": "E07617C85C9FACF5543C767BE10D004E4077E76313BDED442DF9021521B1D0CE"
+  },
+  {
+    "Path": "C:\\Users\\amiin\\Documents\\open-zeld\\Scripts\\player.gd.uid",
+    "Hash": "3A85904297C0CA41C885A6993033BC523CBE0265FAA46733BD22D2919297F7E8"
+  }
+]

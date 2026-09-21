@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://dy2l03wl4hokh"
+path="res://.godot/imported/Roof_Front_Brick2.obj-bc4c73ad870fad7a447e9434a7e7e81c.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Roof_Front_Brick2.obj-bc4c73ad870fad7a447e9434a7e7e81c.mesh"]
+
+source_file="res://Medieval Village Megakit/OBJ/Roof_Front_Brick2.obj"
+dest_files=["res://.godot/imported/Roof_Front_Brick2.obj-bc4c73ad870fad7a447e9434a7e7e81c.mesh", "res://.godot/imported/Roof_Front_Brick2.obj-bc4c73ad870fad7a447e9434a7e7e81c.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

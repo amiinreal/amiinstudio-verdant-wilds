@@ -1,0 +1,72 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://Adventure/main.gd" id="1"]
+[ext_resource type="Script" path="res://Adventure/session.gd" id="2"]
+[ext_resource type="Script" path="res://Adventure/hud.gd" id="3"]
+[ext_resource type="Script" path="res://Adventure/audio.gd" id="4"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+sky_top_color = Color(0.22, 0.43, 0.56, 1)
+sky_horizon_color = Color(0.65, 0.76, 0.69, 1)
+ground_bottom_color = Color(0.11, 0.24, 0.25, 1)
+ground_horizon_color = Color(0.65, 0.76, 0.69, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.68, 0.79, 0.86, 1)
+ambient_light_energy = 0.4
+tonemap_mode = 2
+ssao_enabled = true
+ssao_radius = 1.8
+ssao_intensity = 1.2
+glow_enabled = true
+fog_enabled = true
+fog_light_color = Color(0.52, 0.69, 0.66, 1)
+fog_density = 0.0007
+
+[sub_resource type="SphereShape3D" id="CameraShape"]
+radius = 0.2
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Session" type="Node3D" parent="."]
+script = ExtResource("2")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-43, -28, 0)
+light_color = Color(1, 0.9, 0.75, 1)
+light_energy = 1.0
+shadow_enabled = true
+directional_shadow_max_distance = 150.0
+
+[node name="CameraRig" type="Node3D" parent="."]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig"]
+spring_length = 7.5
+margin = 0.2
+shape = SubResource("CameraShape")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/SpringArm3D"]
+fov = 67.0
+near = 0.1
+far = 1200.0
+
+[node name="Overview" type="Camera3D" parent="."]
+current = true
+fov = 62.0
+far = 2000.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("3")
+
+[node name="Audio" type="Node" parent="."]
+script = ExtResource("4")

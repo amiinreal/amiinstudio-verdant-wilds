@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://dfej6rvb3lc1x"
+path="res://.godot/imported/Corner_Interior_Big.obj-f414bedce8575ac9064db28ffb6770bd.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Corner_Interior_Big.obj-f414bedce8575ac9064db28ffb6770bd.mesh"]
+
+source_file="res://Medieval Village Megakit/OBJ/Corner_Interior_Big.obj"
+dest_files=["res://.godot/imported/Corner_Interior_Big.obj-f414bedce8575ac9064db28ffb6770bd.mesh", "res://.godot/imported/Corner_Interior_Big.obj-f414bedce8575ac9064db28ffb6770bd.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

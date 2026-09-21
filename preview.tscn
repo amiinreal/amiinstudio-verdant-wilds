@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://b6lmudx07lkng"]
+
+[ext_resource type="PackedScene" path="res://styled Nature megaKit/ProceduralWorld/preview.tscn" id="1_2gyu8"]
+
+[node name="Node3D" type="Node3D" unique_id=1153060423]
+
+[node name="ResonantWildsPreview" parent="." unique_id=630845719 instance=ExtResource("1_2gyu8")]

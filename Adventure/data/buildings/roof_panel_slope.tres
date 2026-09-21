@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+[ext_resource type="Script" path="res://Adventure/building_piece_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://Medieval Village Megakit/glTF/Roof_Wooden_2x1.gltf" id="2"]
+[resource]
+script = ExtResource("1")
+id = "roof_panel_slope"
+display_name = "Roof slope · 1 m rise"
+category = "Structure"
+subcategory = "Custom roofs"
+scene = ExtResource("2")
+resource_cost = {"wood": 2}
+snap_type = "roof_panel"
+footprint = Vector2i(1, 1)

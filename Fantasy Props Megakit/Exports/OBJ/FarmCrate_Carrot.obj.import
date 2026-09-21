@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://53em7xbsb80x"
+path="res://.godot/imported/FarmCrate_Carrot.obj-e46dee4e9f5070215fe7bd281801b904.mesh"
+
+[deps]
+
+files=["res://.godot/imported/FarmCrate_Carrot.obj-e46dee4e9f5070215fe7bd281801b904.mesh"]
+
+source_file="res://Fantasy Props Megakit/Exports/OBJ/FarmCrate_Carrot.obj"
+dest_files=["res://.godot/imported/FarmCrate_Carrot.obj-e46dee4e9f5070215fe7bd281801b904.mesh", "res://.godot/imported/FarmCrate_Carrot.obj-e46dee4e9f5070215fe7bd281801b904.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

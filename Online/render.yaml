@@ -1,0 +1,13 @@
+# Starter plan (not free) so the service never sleeps: the in-memory
+# rooms/tickets state and open WebSocket relay connections cannot survive
+# an idle-triggered restart the way a stateless HTTP API could.
+services:
+  - type: web
+    name: amiin-online
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false

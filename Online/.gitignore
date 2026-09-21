@@ -1,0 +1,7 @@
+*.db
+*.db-*
+.env
+artifacts/
+__pycache__/
+.pytest_cache/
+*.pem

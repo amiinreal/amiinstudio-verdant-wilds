@@ -1,0 +1,13 @@
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
+ERROR: Failed to read the root certificate store.
+   at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)
+Resonant Wilds | seed 73129 | { "trees": 300, "rocks": 199, "plants": 4684, "instances": 5052, "batches": 490, "milliseconds": 903 }
+Resonant Wilds | seed 73129 | { "trees": 300, "rocks": 199, "plants": 4684, "instances": 5052, "batches": 490, "milliseconds": 769 }
+Resonant Wilds | seed 73129 | { "trees": 300, "rocks": 199, "plants": 4684, "instances": 5052, "batches": 490, "milliseconds": 748 }
+Resonant Wilds | seed 42 | { "trees": 314, "rocks": 212, "plants": 4701, "instances": 5083, "batches": 502, "milliseconds": 758 }
+Resonant Wilds | seed -713 | { "trees": 303, "rocks": 184, "plants": 4550, "instances": 4921, "batches": 495, "milliseconds": 749 }
+Resonant Wilds | seed 2026 | { "trees": 300, "rocks": 216, "plants": 4576, "instances": 4944, "batches": 500, "milliseconds": 802 }
+Resonant Wilds | seed 2026 | { "trees": 300, "rocks": 216, "plants": 4576, "instances": 4944, "batches": 300, "milliseconds": 866 }
+Resonant Wilds | seed 2026 | { "trees": 300, "rocks": 216, "plants": 4576, "instances": 4944, "batches": 894, "milliseconds": 741 }
+VALIDATION PASSED | 0 failures | deterministic placement, 4 seeds, 2 sizes, connected dry routes, spawn collisions, regeneration, resonance

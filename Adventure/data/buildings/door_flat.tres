@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Adventure/building_piece_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://Medieval Village Megakit/glTF/Wall_Plaster_Door_Flat.gltf" id="2"]
+[ext_resource type="Texture2D" path="res://Adventure/generated/thumbnails/door_flat.png" id="3"]
+[resource]
+script = ExtResource("1")
+id = "door_flat"
+display_name = "Flat doorway"
+category = "Structure"
+subcategory = "Doors"
+scene = ExtResource("2")
+resource_cost = {"wood": 4, "stone": 2}
+snap_type = "door"
+footprint = Vector2i(1,1)
+offset = Vector3(0,0,0)
+placement_rules = {"free": false}
+snap_points = {"bottom": Vector3(0,0,0), "left": Vector3(-1,0,0), "right": Vector3(1,0,0), "top": Vector3(0,3,0)}
+thumbnail = ExtResource("3")

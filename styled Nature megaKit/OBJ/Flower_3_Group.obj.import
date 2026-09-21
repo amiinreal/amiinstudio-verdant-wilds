@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://b7hsrw10x08p"
+path="res://.godot/imported/Flower_3_Group.obj-f976dc7df230e28bc7cf21528d3b0dd8.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Flower_3_Group.obj-f976dc7df230e28bc7cf21528d3b0dd8.mesh"]
+
+source_file="res://styled Nature megaKit/OBJ/Flower_3_Group.obj"
+dest_files=["res://.godot/imported/Flower_3_Group.obj-f976dc7df230e28bc7cf21528d3b0dd8.mesh", "res://.godot/imported/Flower_3_Group.obj-f976dc7df230e28bc7cf21528d3b0dd8.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

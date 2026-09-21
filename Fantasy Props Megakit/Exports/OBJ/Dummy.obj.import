@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ct4dgb1iy7tb0"
+path="res://.godot/imported/Dummy.obj-dfeda83cab634bd9644259b32a1bbe3c.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Dummy.obj-dfeda83cab634bd9644259b32a1bbe3c.mesh"]
+
+source_file="res://Fantasy Props Megakit/Exports/OBJ/Dummy.obj"
+dest_files=["res://.godot/imported/Dummy.obj-dfeda83cab634bd9644259b32a1bbe3c.mesh", "res://.godot/imported/Dummy.obj-dfeda83cab634bd9644259b32a1bbe3c.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

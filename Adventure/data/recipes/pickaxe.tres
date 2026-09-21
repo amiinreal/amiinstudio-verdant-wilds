@@ -1,0 +1,10 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://Adventure/recipe_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+recipe_id = "pickaxe"
+display_name = "Pickaxe"
+ingredients = {"wood":6,"stone":6}
+result = "pickaxe"
+quantity = 1
+effect_type = "stone"

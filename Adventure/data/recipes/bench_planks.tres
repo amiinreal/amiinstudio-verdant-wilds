@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://Adventure/recipe_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+recipe_id = "bench_planks"
+display_name = "Workbench planks"
+ingredients = {"wood":3}
+result = "planks"
+quantity = 4
+craft_time = 3.0
+required_station = "workbench"
+animation_type = "CraftWorkbench"
+effect_type = "wood"
