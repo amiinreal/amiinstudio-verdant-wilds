@@ -8,10 +8,10 @@
 ; (see .github/workflows/release.yml). #ifndef guards keep a plain double-click
 ; compile in the Inno Setup IDE working with these defaults.
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.1"
+  #define MyAppVersion "0.3.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\Releases\launcher-0.2.1"
+  #define SourceDir "..\Releases\launcher-0.3.0"
 #endif
 #define MyAppPublisher "Amiin Studio"
 #define MyAppExeName "AmiinLauncher.exe"

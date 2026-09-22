@@ -7,10 +7,10 @@
 
     <!-- Kept in sync with Updates.Version (the constant the update pipeline actually
          compares against); see Updates.cs. Bump both together. -->
-    <Version>0.2.1</Version>
-    <FileVersion>0.2.1.0</FileVersion>
-    <AssemblyVersion>0.2.1.0</AssemblyVersion>
-    <InformationalVersion>0.2.1</InformationalVersion>
+    <Version>0.3.0</Version>
+    <FileVersion>0.3.0.0</FileVersion>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <InformationalVersion>0.3.0</InformationalVersion>
 
     <Product>Amiin Studio Launcher</Product>
     <AssemblyTitle>Amiin Studio Launcher</AssemblyTitle>
