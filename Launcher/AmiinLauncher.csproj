@@ -5,9 +5,26 @@
     <AssemblyName>AmiinLauncher</AssemblyName><Version>0.1.0</Version>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-  <ItemGroup><Compile Include="Program.cs"/><Compile Include="Updates.cs"/></ItemGroup>
   <ItemGroup>
-    <Content Include="../Logo/X8y06N.png" Link="logo.png" CopyToOutputDirectory="PreserveNewest"/>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs"/>
+    <Compile Include="Updates.cs"/>
+    <Compile Include="Models/*.cs"/>
+    <Compile Include="Converters/*.cs"/>
+    <Compile Include="Services/*.cs"/>
+    <Compile Include="ViewModels/*.cs"/>
+    <Compile Include="MainWindow.xaml.cs"/>
+    <Compile Include="Views/*.xaml.cs"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="MainWindow.xaml"/>
+    <Page Include="Views/*.xaml"/>
+    <Page Include="Styles/*.xaml"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../Logo/X8y06N.png" Link="Assets/amiin-logo.png" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="launcher-config.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('launcher-config.json')"/>
   </ItemGroup>
 </Project>
