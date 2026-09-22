@@ -1,0 +1,187 @@
+<UserControl x:Class="Amiin.Views.GameDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" Background="{StaticResource BackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Back-nav -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="0,0,0,1" Padding="28,0">
+            <Button Content="Library" Style="{StaticResource TextLinkButtonStyle}" HorizontalAlignment="Left"
+                    VerticalAlignment="Center" Command="{Binding BackCommand}">
+                <Button.ContentTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconChevronLeft}" Style="{StaticResource LineIconStyle}" Width="12" Height="12" Stroke="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="Library" Margin="6,0,0,0" FontSize="13"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Button.ContentTemplate>
+            </Button>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- Splash hero -->
+                <Grid Height="392" ClipToBounds="True">
+                    <Rectangle Fill="{StaticResource ForestSkyBrush}"/>
+                    <Rectangle Fill="{StaticResource SunGlowBrush}"/>
+                    <Path Data="M-50,260 L150,170 L320,220 L520,130 L740,200 L960,110 L1180,190 L1440,120 L1500,160 L1500,392 L-50,392 Z" Fill="#123A24" Stretch="Fill"/>
+                    <Path Data="M-50,300 L200,250 L420,290 L640,220 L860,280 L1100,230 L1320,270 L1500,240 L1500,392 L-50,392 Z" Fill="#0A2418" Stretch="Fill"/>
+                    <Rectangle Fill="{StaticResource HeroOverlayBrush}"/>
+
+                    <StackPanel VerticalAlignment="Bottom" Margin="44,0,0,32">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource GameGreenDeepBrush}"
+                                    BorderBrush="{StaticResource GameGoldBrush}" BorderThickness="2">
+                                <Path Data="{StaticResource IconLeafSprout}" Stroke="{StaticResource GameGoldBrush}" StrokeThickness="1.8"
+                                      Width="26" Height="26" Stretch="Uniform"/>
+                            </Border>
+                            <TextBlock Text="{Binding Game.Title}" FontFamily="{StaticResource DisplayFont}" FontSize="40" FontWeight="ExtraBold"
+                                       Foreground="White" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Game.Tagline}" FontSize="14" Foreground="#D9E5DD" Margin="0,10,0,20"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{Binding Game.PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding PlayCommand}"/>
+                            <Button Style="{StaticResource IconButtonStyle}" Width="44" Height="44" Margin="10,0,0,0"
+                                    Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1">
+                                <Path Data="{StaticResource IconDownloadArrow}" Style="{StaticResource LineIconStyle}"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButtonStyle}" Width="44" Height="44" Margin="8,0,0,0"
+                                    Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1">
+                                <Path Data="{StaticResource IconGear}" Style="{StaticResource LineIconStyle}"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Body -->
+                <Grid Margin="44,36,44,40">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="36"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left column -->
+                    <StackPanel Grid.Column="0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                            <RadioButton Content="Overview" GroupName="Tabs" IsChecked="True" Style="{StaticResource TabHeaderStyle}"
+                                         Command="{Binding SelectTabCommand}" CommandParameter="Overview"/>
+                            <RadioButton Content="Screenshots" GroupName="Tabs" Style="{StaticResource TabHeaderStyle}" Margin="24,0,0,0"
+                                         Command="{Binding SelectTabCommand}" CommandParameter="Screenshots"/>
+                            <RadioButton Content="Achievements" GroupName="Tabs" Style="{StaticResource TabHeaderStyle}" Margin="24,0,0,0"
+                                         Command="{Binding SelectTabCommand}" CommandParameter="Achievements"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding Description}" FontSize="13.5" LineHeight="23" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+
+                        <TextBlock Text="Screenshots" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="14" Margin="0,28,0,12"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="190" Height="110" CornerRadius="8" Margin="0,0,12,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource GameGreenBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Rectangle RadiusX="8" RadiusY="8" Fill="{StaticResource ForestSkyBrush}"/>
+                            </Border>
+                            <Border Width="190" Height="110" CornerRadius="8" Margin="0,0,12,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource GameGreenBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Rectangle RadiusX="8" RadiusY="8" Fill="{StaticResource SunGlowBrush}"/>
+                            </Border>
+                            <Border Width="190" Height="110" CornerRadius="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource GameGreenBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Rectangle RadiusX="8" RadiusY="8" Fill="{StaticResource GameGreenDeepBrush}"/>
+                            </Border>
+                        </StackPanel>
+
+                        <Grid Margin="0,32,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition/>
+                                <ColumnDefinition/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="PLAYTIME" FontSize="11" Foreground="{StaticResource TextFaintBrush}"/>
+                                <TextBlock Text="{Binding Game.PlaytimeHours, StringFormat='{}{0:F0} hrs'}" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="LAST PLAYED" FontSize="11" Foreground="{StaticResource TextFaintBrush}"/>
+                                <TextBlock Text="{Binding Game.LastPlayed}" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="VERSION" FontSize="11" Foreground="{StaticResource TextFaintBrush}"/>
+                                <TextBlock Text="{Binding Game.Version}" FontSize="14" FontWeight="Bold" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Right panel -->
+                    <Border Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}"
+                            BorderThickness="1" CornerRadius="12" Padding="20" VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Text="Game details" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="14" Margin="0,0,0,14"/>
+                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Developer" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Developer}" FontSize="12.5" HorizontalAlignment="Right"/></Grid>
+                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Publisher" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Publisher}" FontSize="12.5" HorizontalAlignment="Right"/></Grid>
+                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Genre" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Genre}" FontSize="12.5" HorizontalAlignment="Right"/></Grid>
+                            <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Release date" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ReleaseDate}" FontSize="12.5" HorizontalAlignment="Right"/></Grid>
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Size on disk" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SizeOnDisk}" FontSize="12.5" HorizontalAlignment="Right"/></Grid>
+
+                            <Border BorderBrush="{StaticResource BorderBrush1}" BorderThickness="0,1,0,0" Margin="0,18,0,16"/>
+
+                            <TextBlock Text="System requirements" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="14" Margin="0,0,0,12"/>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="OS " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementOS}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="CPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementCpu}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="GPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementGpu}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="RAM " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementRam}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel><TextBlock FontSize="12"><Run Text="Storage " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementStorage}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

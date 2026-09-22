@@ -1,0 +1,161 @@
+<UserControl x:Class="Amiin.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+             xmlns:models="clr-namespace:Amiin.Models"
+             mc:Ignorable="d" Background="{StaticResource BackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="76"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top bar -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="0,0,0,1" Padding="28,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="340" Height="38" HorizontalAlignment="Left" Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" CornerRadius="8"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Path Grid.Column="0" Data="{StaticResource IconSearch}" Style="{StaticResource LineIconStyle}" Width="15" Height="15" Margin="12,0,0,0"/>
+                        <Grid Grid.Column="1">
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center" Margin="8,0,10,0" FontSize="13"/>
+                            <TextBlock Text="Search your library" Foreground="{StaticResource TextFaintBrush}" FontSize="13"
+                                       Margin="8,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource IconButtonStyle}" ToolTip="Notifications">
+                        <Path Data="{StaticResource IconBell}" Style="{StaticResource LineIconStyle}"/>
+                    </Button>
+                    <Button Style="{StaticResource IconButtonStyle}" ToolTip="Downloads" Margin="4,0,0,0">
+                        <Path Data="{StaticResource IconDownloadTray}" Style="{StaticResource LineIconStyle}"/>
+                    </Button>
+                    <Button Style="{StaticResource GhostButtonStyle}" Content="Sign out" Margin="12,0,0,0" Padding="12,6" FontSize="12"
+                            Command="{Binding SignOutCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28">
+
+                <!-- Hero banner -->
+                <Border x:Name="HeroBorder" Height="296" CornerRadius="16" Cursor="Hand"
+                        MouseLeftButtonUp="Hero_Click" DataContext="{Binding FeaturedGame}" SizeChanged="HeroBorder_SizeChanged">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid ClipToBounds="True">
+                        <Rectangle Fill="{StaticResource ForestSkyBrush}"/>
+                        <Rectangle Fill="{StaticResource SunGlowBrush}"/>
+                        <Path Data="M0,220 L120,150 L260,190 L420,120 L620,170 L820,110 L1000,160 L1240,90 L1440,140 L1440,296 L0,296 Z"
+                              Fill="#123A24" Stretch="Fill"/>
+                        <Path Data="M0,250 L180,210 L360,240 L560,180 L760,230 L980,190 L1200,220 L1440,200 L1440,296 L0,296 Z"
+                              Fill="#0A2418" Stretch="Fill"/>
+                        <Rectangle Fill="{StaticResource HeroOverlayBrush}"/>
+
+                        <StackPanel VerticalAlignment="Center" Margin="44,0,0,0" MaxWidth="640">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Ellipse Width="18" Height="18" Fill="{StaticResource GameGreenDeepBrush}" Stroke="{StaticResource GameGoldBrush}" StrokeThickness="1.5"/>
+                                <TextBlock Text="CONTINUE YOUR ADVENTURE" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}"
+                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="44" FontWeight="ExtraBold"
+                                       Foreground="White" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Tagline}" FontSize="14" Foreground="#D9E5DD" Margin="0,8,0,18" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="{Binding PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding DataContext.PlayGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"/>
+                                <Button Content="View Game" Style="{StaticResource GhostButtonStyle}" Margin="10,0,0,0"
+                                        Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Library grid -->
+                <Grid Margin="0,28,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="My Library" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Games.Count, StringFormat='{}{0} games'}" FontSize="12" Foreground="{StaticResource TextFaintBrush}" VerticalAlignment="Center"/>
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding Games}" Margin="0,16,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="5"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:GameModel}">
+                            <Border Margin="0,0,16,16" Cursor="Hand" MouseLeftButtonUp="Card_Click">
+                                <StackPanel>
+                                    <Border Height="150" CornerRadius="10" Style="{StaticResource GameCardStyle}">
+                                        <Grid>
+                                            <Rectangle RadiusX="10" RadiusY="10">
+                                                <Rectangle.Fill>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#1C4B2E" Offset="0"/>
+                                                        <GradientStop Color="#0B3320" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                            <Path Data="{StaticResource IconDownloadArrow}" Stroke="White" StrokeThickness="1.8"
+                                                  Width="26" Height="26" Stretch="Uniform"
+                                                  Visibility="{Binding Status, Converter={StaticResource NotInstalledToVis}}"/>
+                                            <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" FontSize="16"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="120"
+                                                       Visibility="{Binding Status, Converter={StaticResource InstalledToVis}}"/>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="Bold" Margin="0,8,0,2" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{Binding Status, Converter={StaticResource StatusColorConverter}}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
