@@ -2,6 +2,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,7 +13,14 @@ public record Package(string version, string url, string sha256, long size, stri
 public record GameEntry(string id, string title, string tagline, int protocol, Package package);
 public record Manifest(string channel, long revision, string notes, Package launcher, List<GameEntry> games);
 public record Envelope(string payload, string signature);
-public record Configuration(string api, string publicKey, bool development = false);
+
+// requireAuthenticodeSignature: off by default because release binaries are not yet
+// Authenticode-signed (see Launcher/SIGNING.md). Once a real certificate is wired into
+// the release pipeline, set this to true in launcher-config.json to make Install()
+// refuse to install any executable that isn't validly signed and chain-trusted --
+// on top of, not instead of, the SHA-256 + RSA-signed-manifest checks below, which
+// apply regardless of this setting.
+public record Configuration(string api, string publicKey, bool development = false, bool requireAuthenticodeSignature = false);
 
 public static class Updates
 {
@@ -48,7 +56,7 @@ public static class Updates
     public static string ActionFor(Manifest release, string launcherVersion, GameEntry selected, string? installedGameVersion)
         => release.launcher.version != launcherVersion ? "launcher" : selected.package.version != installedGameVersion ? "game" : "play";
 
-    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress, string slot = "")
+    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress, string slot = "", bool requireAuthenticodeSignature = false)
     {
         SafeName(package.version); SafeName(channel); if (slot.Length > 0) SafeName(slot);
         if (kind != "launcher" && kind != "game") throw new Exception("Invalid package type.");
@@ -95,6 +103,11 @@ public static class Updates
             }
             var entry = SafeEntry(stage, package.entry);
             if (!File.Exists(entry) || !entry.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) throw new Exception("Release executable is missing.");
+            // This is on top of, not instead of, the SHA-256 + RSA-signed-manifest checks
+            // above (which already guarantee this exact file came from the signed release
+            // and wasn't tampered with in transit). It only matters once release binaries
+            // are actually Authenticode-signed -- see requireAuthenticodeSignature.
+            VerifyAuthenticodeIfRequired(entry, requireAuthenticodeSignature);
             await File.WriteAllTextAsync(Path.Combine(stage,"installed.json"), JsonSerializer.Serialize(package));
             // Never overwrite a running version; valid existing installations are reused.
             if (!Directory.Exists(destination)) Directory.Move(stage,destination);
@@ -107,6 +120,33 @@ public static class Updates
         {
             if (File.Exists(archive)) File.Delete(archive);
             if (Directory.Exists(stage)) Directory.Delete(stage,true);
+        }
+    }
+    // Authenticode signature + certificate-chain-trust check for an executable about to
+    // replace/become the active install. Disabled by default (see Configuration above).
+    public static void VerifyAuthenticodeIfRequired(string path, bool required)
+    {
+        if (!required) return;
+        X509Certificate2 certificate;
+        try
+        {
+            using var signer = X509Certificate.CreateFromSignedFile(path);
+            certificate = new X509Certificate2(signer);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new Exception("This release is not Authenticode-signed, but the launcher is configured to require signed executables. Refusing to install. (" + ex.Message + ")");
+        }
+        using (certificate)
+        using (var chain = new X509Chain())
+        {
+            chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+            chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+            if (!chain.Build(certificate))
+            {
+                var problems = string.Join(", ", chain.ChainStatus.Select(s => s.StatusInformation.Trim()));
+                throw new Exception("This release's signing certificate did not chain to a trusted root (" + problems + "). Refusing to install.");
+            }
         }
     }
     public static string SafeEntry(string root, string name)

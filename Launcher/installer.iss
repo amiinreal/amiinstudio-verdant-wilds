@@ -3,10 +3,18 @@
 ; installer for first-time downloads. In-app auto-updates still use the plain
 ; zip via Updates.cs -- this installer is only the first-run experience.
 #define MyAppName "Amiin Studio Launcher"
-#define MyAppVersion "0.2.1"
+; MyAppVersion / SourceDir can be overridden from the command line, e.g.
+; ISCC /DMyAppVersion=0.2.2 /DSourceDir=..\Releases\launcher-0.2.2 installer.iss
+; (see .github/workflows/release.yml). #ifndef guards keep a plain double-click
+; compile in the Inno Setup IDE working with these defaults.
+#ifndef MyAppVersion
+  #define MyAppVersion "0.2.1"
+#endif
+#ifndef SourceDir
+  #define SourceDir "..\Releases\launcher-0.2.1"
+#endif
 #define MyAppPublisher "Amiin Studio"
 #define MyAppExeName "AmiinLauncher.exe"
-#define SourceDir "..\Releases\launcher-0.2.1"
 
 [Setup]
 AppId={{6C6F5E1E-6B0D-4A9E-9B1A-3E3B9F0C4B21}
@@ -35,7 +43,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Files]
 Source: "{#SourceDir}\AmiinLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\launcher-config.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\logo.png"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\Assets\amiin-logo.png"; DestDir: "{app}\Assets"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSIX package manifest for Microsoft Store / sideload distribution.
+
+  This packages the EXISTING WPF launcher (unpackaged Win32 app) using the
+  "Desktop Bridge" MSIX model - it does not rewrite the launcher. The
+  published dotnet output is packaged as-is; VFS/registry virtualization is
+  not needed since the launcher already stores its state under
+  %LocalAppData% (see Updates.Root in Updates.cs).
+
+  ============================================================================
+  PLACEHOLDERS - REPLACE BEFORE SUBMITTING TO PARTNER CENTER
+  ============================================================================
+  The values below marked "REPLACE-ME" cannot be invented by tooling: they
+  are assigned to you when you reserve the app name in Partner Center
+  (https://partner.microsoft.com/dashboard). Partner Center's own submission
+  wizard will show you the exact Identity/Name, Publisher, and
+  PublisherDisplayName to paste in here (Product Management > Product
+  identity, and App identity within your app's page).
+  ============================================================================
+-->
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="REPLACE-ME.AmiinStudio.VerdantWildsLauncher"
+    Publisher="CN=REPLACE-ME-WITH-YOUR-PARTNER-CENTER-PUBLISHER-ID"
+    Version="0.2.1.0" />
+
+  <Properties>
+    <DisplayName>Amiin Studio Launcher</DisplayName>
+    <PublisherDisplayName>REPLACE-ME (your Partner Center publisher display name)</PublisherDisplayName>
+    <Logo>Assets\Square150x150Logo.png</Logo>
+    <Description>Official launcher for Amiin Studio games, including The Verdant Wilds.</Description>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Applications>
+    <Application Id="AmiinLauncher" Executable="AmiinLauncher.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Amiin Studio Launcher"
+        Description="Official launcher for Amiin Studio games, including The Verdant Wilds."
+        BackgroundColor="#14161C"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\Square71x71Logo.png" Square310x310Logo="Assets\Square310x310Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#14161C" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- runFullTrust: required for Desktop Bridge (an ordinary Win32/.NET app,
+         not a sandboxed UWP app). No other capabilities are requested - the
+         launcher only needs outbound internet access, which does not require
+         a declared capability for a full-trust package. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+</Package>

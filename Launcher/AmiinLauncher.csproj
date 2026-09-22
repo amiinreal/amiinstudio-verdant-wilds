@@ -2,8 +2,24 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <AssemblyName>AmiinLauncher</AssemblyName><Version>0.1.0</Version>
+    <AssemblyName>AmiinLauncher</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <!-- Kept in sync with Updates.Version (the constant the update pipeline actually
+         compares against); see Updates.cs. Bump both together. -->
+    <Version>0.2.1</Version>
+    <FileVersion>0.2.1.0</FileVersion>
+    <AssemblyVersion>0.2.1.0</AssemblyVersion>
+    <InformationalVersion>0.2.1</InformationalVersion>
+
+    <Product>Amiin Studio Launcher</Product>
+    <AssemblyTitle>Amiin Studio Launcher</AssemblyTitle>
+    <Company>Amiin Studio</Company>
+    <Authors>Amiin Studio</Authors>
+    <Description>Official launcher for Amiin Studio games, including The Verdant Wilds. Signs in, checks for signed updates, and launches the selected game.</Description>
+    <Copyright>Copyright (c) 2026 Amiin Studio</Copyright>
+    <NeutralLanguage>en</NeutralLanguage>
+    <ApplicationIcon>launcher.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />

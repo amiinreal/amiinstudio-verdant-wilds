@@ -108,7 +108,7 @@ public class NavigationService : ObservableObject
             {
                 status.Mode = LauncherMode.Updating;
                 status.ProgressText = "Launcher update required first. The game update will follow after restart.";
-                var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter);
+                var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter, requireAuthenticodeSignature: _state.Config.requireAuthenticodeSignature);
                 SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
                 RequestCloseApplication?.Invoke();
                 return;
@@ -116,7 +116,7 @@ public class NavigationService : ObservableObject
 
             string gamePath;
             if (action == "game" || installedPackage?.sha256 != entry.package.sha256)
-                gamePath = await Updates.Install(entry.package, "game", channel, _state.Config.development, reporter, entry.id);
+                gamePath = await Updates.Install(entry.package, "game", channel, _state.Config.development, reporter, entry.id, _state.Config.requireAuthenticodeSignature);
             else
                 gamePath = Updates.Installed("game", channel, entry.id).Item2!;
 

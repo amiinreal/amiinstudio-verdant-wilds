@@ -4,3 +4,8 @@ build/
 publish/
 tests/bin/
 tests/obj/
+
+# Dev-only signing material -- never commit certificates or private keys.
+Packaging/*.pfx
+Packaging/*.cer
+Packaging/*.p12
