@@ -48,7 +48,7 @@ public static class Updates
     public static string ActionFor(Manifest release, string launcherVersion, GameEntry selected, string? installedGameVersion)
         => release.launcher.version != launcherVersion ? "launcher" : selected.package.version != installedGameVersion ? "game" : "play";
 
-    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress, string slot = "")
+    public static async Task<string> Install(Package package, string kind, string channel, bool dev, IProgress<(double,string)> progress, string slot = "", CancellationToken cancellationToken = default, Func<bool>? isPaused = null)
     {
         SafeName(package.version); SafeName(channel); if (slot.Length > 0) SafeName(slot);
         if (kind != "launcher" && kind != "game") throw new Exception("Invalid package type.");
@@ -60,19 +60,24 @@ public static class Updates
         var stage = Path.Combine(folder, Guid.NewGuid()+".staging");
         try
         {
-            using var response = await Http.GetAsync(SafeUrl(package.url, dev), HttpCompletionOption.ResponseHeadersRead);
+            using var response = await Http.GetAsync(SafeUrl(package.url, dev), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
             SafeUrl(response.RequestMessage!.RequestUri!.AbsoluteUri, dev);
-            await using (var input = await response.Content.ReadAsStreamAsync())
+            await using (var input = await response.Content.ReadAsStreamAsync(cancellationToken))
             await using (var output = new FileStream(archive, FileMode.CreateNew))
             {
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new byte[262144]; long total = 0; int count;
-                while ((count = await input.ReadAsync(buffer)) > 0)
+                while (true)
                 {
+                    // Not reading from the socket while paused lets TCP backpressure actually
+                    // stop the transfer, rather than just pretending to via a UI flag.
+                    while (isPaused != null && isPaused()) await Task.Delay(200, cancellationToken);
+                    count = await input.ReadAsync(buffer, cancellationToken);
+                    if (count <= 0) break;
                     total += count;
                     if (total > package.size) throw new Exception("Download exceeded its signed size.");
-                    hash.AppendData(buffer, 0, count); await output.WriteAsync(buffer.AsMemory(0,count));
+                    hash.AppendData(buffer, 0, count); await output.WriteAsync(buffer.AsMemory(0,count), cancellationToken);
                     progress.Report((70d * total/package.size, $"Downloading {kind} · {total/1048576d:F1} / {package.size/1048576d:F1} MB"));
                 }
                 if (total != package.size || !Convert.ToHexString(hash.GetHashAndReset()).Equals(package.sha256, StringComparison.OrdinalIgnoreCase))

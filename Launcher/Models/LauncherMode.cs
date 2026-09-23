@@ -1,3 +1,3 @@
 namespace Amiin.Models;
 
-public enum LauncherMode { Installing, Updating, Launching }
+public enum LauncherMode { Installing, Updating, Launching, Failed }

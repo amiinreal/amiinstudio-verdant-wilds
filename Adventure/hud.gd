@@ -5,6 +5,7 @@ signal join_requested(address: String,port: int,nickname: String)
 signal leave_requested
 signal build_requested(index: int)
 const Items = preload("res://Adventure/items.gd")
+const Branding = preload("res://Adventure/branding.gd")
 const HOTBAR: Array[String]=["axe","pickaxe","hammer","wood","stone","fiber","planks","rope"]
 var _controls: PanelContainer
 var _slot_numbers: Array[Label]=[]
@@ -32,9 +33,11 @@ var _seed: LineEdit
 var _address: LineEdit
 var _port: LineEdit
 var _map: Control
+var _scrim: ColorRect
 
 func _ready() -> void:
 	_root=Control.new(); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(_root)
+	_scrim=ColorRect.new(); _scrim.color=Color(0.02,0.045,0.045,0.6); _scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _scrim.mouse_filter=Control.MOUSE_FILTER_IGNORE; _scrim.hide(); _root.add_child(_scrim)
 	_panel=PanelContainer.new(); _panel.add_theme_stylebox_override("panel",style(Color(0.035,0.095,0.11,0.95),26)); _root.add_child(_panel)
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER); _panel.offset_left=-400; _panel.offset_right=400; _panel.offset_top=-300; _panel.offset_bottom=300
 	_body=VBoxContainer.new(); _body.add_theme_constant_override("separation",12); _panel.add_child(_body)
@@ -96,16 +99,19 @@ func toggle_menu() -> void:
 	if menu_open: close_menu()
 	else: open_page("Camp")
 func close_menu() -> void:
-	menu_open=false; _panel.hide(); Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
+	menu_open=false; _panel.hide(); _scrim.hide(); Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
 func show_message(text: String,duration: float=4) -> void:
 	_notice.text=text; _notice_time=duration
 
 func open_page(value: String) -> void:
-	page=value; menu_open=true; _panel.show(); Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+	page=value; menu_open=true; _panel.show(); _scrim.show(); Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
 	for child: Node in _body.get_children(): _body.remove_child(child); child.queue_free()
 	_map=null
 	var heading: HBoxContainer=HBoxContainer.new(); _body.add_child(heading)
-	var title: Label=label("THE VERDANT WILDS" if page=="Welcome" else page.to_upper(),30,Color("f2e5c8")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; heading.add_child(title)
+	if page=="Welcome":
+		var lockup: HBoxContainer=Branding.build_horizontal_lockup(40,30); lockup.size_flags_horizontal=Control.SIZE_EXPAND_FILL; heading.add_child(lockup)
+	else:
+		var title: Label=label(page.to_upper(),30,Color("f2e5c8")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; heading.add_child(title)
 	if page!="Welcome": button("Continue  [Esc]",close_menu,heading)
 	if page=="Welcome": _welcome(); return
 	if page=="Camp":
