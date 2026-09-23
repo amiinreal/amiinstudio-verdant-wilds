@@ -7,8 +7,8 @@ public partial class MainWindow : Window
 {
     public MainWindow(NavigationService navigation)
     {
-        InitializeComponent();
         DataContext = navigation;
+        InitializeComponent();
         navigation.RequestCloseApplication = Close;
     }
 

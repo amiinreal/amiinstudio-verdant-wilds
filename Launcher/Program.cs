@@ -33,7 +33,7 @@ public class Program
         if (!owned) { MessageBox.Show("Amiin Launcher is already open."); return; }
 
         var app = new Application();
-        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Styles/LauncherStyles.xaml", UriKind.Relative) });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Styles/LauncherStyles.xaml", UriKind.Absolute) });
 
         var state = new AppState();
         AppState.Current = state;

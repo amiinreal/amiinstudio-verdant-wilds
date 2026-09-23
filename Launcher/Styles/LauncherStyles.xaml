@@ -3,9 +3,9 @@
                     xmlns:conv="clr-namespace:Amiin.Converters">
 
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Colors.xaml"/>
-        <ResourceDictionary Source="Typography.xaml"/>
-        <ResourceDictionary Source="Icons.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/AmiinLauncher;component/Styles/Colors.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/AmiinLauncher;component/Styles/Typography.xaml"/>
+        <ResourceDictionary Source="pack://application:,,,/AmiinLauncher;component/Styles/Icons.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <conv:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
@@ -289,6 +289,13 @@
 
     <!-- ===================== Progress bar ===================== -->
 
+    <!-- Defined before LauncherProgressBarStyle: a StaticResource used inside a
+         ControlTemplate's deferred content must already exist in this dictionary
+         at the point it's declared, or it fails to resolve when the template is
+         applied ("Cannot find resource named 'ProgressGlowEffect'") even though
+         both live in the same file. -->
+    <DropShadowEffect x:Key="ProgressGlowEffect" Color="#FF7A1A" BlurRadius="14" ShadowDepth="0" Opacity="0.55"/>
+
     <Style x:Key="LauncherProgressBarStyle" TargetType="ProgressBar">
         <Setter Property="Height" Value="8"/>
         <Setter Property="Background" Value="{StaticResource Panel2Brush}"/>
@@ -318,8 +325,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <DropShadowEffect x:Key="ProgressGlowEffect" Color="#FF7A1A" BlurRadius="14" ShadowDepth="0" Opacity="0.55"/>
 
     <!-- ===================== Game card ===================== -->
 
