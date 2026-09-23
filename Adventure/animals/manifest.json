@@ -1,0 +1,43 @@
+{
+  "generator": "development/tools/woodland_animals.py",
+  "units": "meters",
+  "forward": "-Z",
+  "animals": [
+    {
+      "species": "cat",
+      "triangles": 17564,
+      "bones": 21,
+      "clips": [
+        "idle",
+        "walk",
+        "trot",
+        "sniff"
+      ],
+      "bytes": 820440
+    },
+    {
+      "species": "dog",
+      "triangles": 16898,
+      "bones": 20,
+      "clips": [
+        "idle",
+        "walk",
+        "trot",
+        "sniff"
+      ],
+      "bytes": 755828
+    },
+    {
+      "species": "cow",
+      "triangles": 18220,
+      "bones": 20,
+      "clips": [
+        "idle",
+        "walk",
+        "trot",
+        "graze"
+      ],
+      "bytes": 836744
+    }
+  ]
+}
