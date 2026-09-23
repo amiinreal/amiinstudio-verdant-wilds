@@ -35,6 +35,16 @@ public class Program
         var app = new Application();
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Styles/LauncherStyles.xaml", UriKind.Absolute) });
 
+        // Last-resort safety net: without this, any exception that escapes a command
+        // handler (a network hiccup, a bad response, anything not already wrapped in its
+        // own try/catch) takes down the whole launcher with no message at all.
+        app.DispatcherUnhandledException += (_, e) =>
+        {
+            MessageBox.Show("Something went wrong and the last action couldn't finish:\n\n" + e.Exception.Message,
+                "Amiin Studio Launcher");
+            e.Handled = true;
+        };
+
         var state = new AppState();
         AppState.Current = state;
         try

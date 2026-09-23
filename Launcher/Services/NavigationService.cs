@@ -72,33 +72,39 @@ public class NavigationService : ObservableObject
         if (_state.Config is null || _state.Token.Length == 0) throw new Exception("Sign in before downloading or playing.");
         var channel = _state.Channel; Updates.SafeName(channel);
 
-        var envelope = await _api.Send("/releases/" + channel);
-        var release = Updates.Verify(envelope.GetRawText(), _state.Config.publicKey, channel);
-        var revisionFile = Path.Combine(Updates.Root, "revisions", channel + ".txt");
-        long previous = File.Exists(revisionFile) ? long.Parse(File.ReadAllText(revisionFile)) : 0;
-        if (release.revision < previous) throw new Exception("Server offered an older release manifest. Update refused.");
-        Updates.AtomicText(revisionFile, release.revision.ToString());
-
-        var entry = release.games.FirstOrDefault(g => g.id == game.Id) ?? throw new Exception("This game is no longer available on this channel.");
-        var (installedPackage, _) = Updates.Installed("game", channel, entry.id);
-        var action = Updates.ActionFor(release, Updates.Version, entry, installedPackage?.version);
-
-        var mode = action switch
-        {
-            "launcher" => LauncherMode.Updating,
-            "game" => installedPackage is null ? LauncherMode.Installing : LauncherMode.Updating,
-            _ => LauncherMode.Launching
-        };
-
-        var status = new StatusViewModel { GameTitle = game.Title, Mode = mode };
+        // Everything from here on used to run partly outside the try/catch below, so a
+        // manifest-fetch/verify failure (network hiccup, stale revision file, a game
+        // dropped from the channel) threw straight through the RelayCommand and crashed
+        // the whole launcher instead of showing an error in the status overlay.
+        var status = new StatusViewModel { GameTitle = game.Title, Mode = LauncherMode.Launching, IsIndeterminate = true, ProgressText = "Checking for updates..." };
         Status = status; IsStatusVisible = true;
 
         var cancellation = new CancellationTokenSource();
         status.CancelRequested += () => cancellation.Cancel();
         status.DismissRequested += () => { IsStatusVisible = false; Status = null; };
 
+        var mode = LauncherMode.Launching;
         try
         {
+            var envelope = await _api.Send("/releases/" + channel);
+            var release = Updates.Verify(envelope.GetRawText(), _state.Config.publicKey, channel);
+            var revisionFile = Path.Combine(Updates.Root, "revisions", channel + ".txt");
+            long previous = File.Exists(revisionFile) ? long.Parse(File.ReadAllText(revisionFile)) : 0;
+            if (release.revision < previous) throw new Exception("Server offered an older release manifest. Update refused.");
+            Updates.AtomicText(revisionFile, release.revision.ToString());
+
+            var entry = release.games.FirstOrDefault(g => g.id == game.Id) ?? throw new Exception("This game is no longer available on this channel.");
+            var (installedPackage, _) = Updates.Installed("game", channel, entry.id);
+            var action = Updates.ActionFor(release, Updates.Version, entry, installedPackage?.version);
+
+            mode = action switch
+            {
+                "launcher" => LauncherMode.Updating,
+                "game" => installedPackage is null ? LauncherMode.Installing : LauncherMode.Updating,
+                _ => LauncherMode.Launching
+            };
+            status.Mode = mode;
+
             var reporter = new Progress<(double Percent, string Text)>(v =>
             {
                 status.Report(v.Percent, v.Text);

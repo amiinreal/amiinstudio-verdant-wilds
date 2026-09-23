@@ -1,6 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- DisplayTextStyle/BodyTextStyle below set Foreground from Colors.xaml, so this
+         dictionary must merge it itself: see the matching note in Icons.xaml. -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/AmiinLauncher;component/Styles/Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
     <!--
         The exact "Sora" / "Manrope" webfonts are not bundled (no verified
         redistribution asset in this repo); we fall back to their closest
