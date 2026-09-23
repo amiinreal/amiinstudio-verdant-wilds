@@ -19,14 +19,17 @@ public partial class StatusViewModel : ObservableObject
     [ObservableProperty] private string timeLeftText = "--";
     [ObservableProperty] private bool isPaused;
     [ObservableProperty] private bool canCancel = true;
+    [ObservableProperty] private string errorMessage = "";
 
     public event Action? CancelRequested;
+    public event Action? DismissRequested;
 
     public string Title => Mode switch
     {
         LauncherMode.Installing => $"Installing {GameTitle}",
         LauncherMode.Updating => $"Updating {GameTitle}",
         LauncherMode.Launching => $"Launching {GameTitle}",
+        LauncherMode.Failed => $"Couldn't start {GameTitle}",
         _ => GameTitle
     };
 
@@ -35,12 +38,14 @@ public partial class StatusViewModel : ObservableObject
         LauncherMode.Installing => "Setting up game files",
         LauncherMode.Updating => "Applying the latest patch",
         LauncherMode.Launching => "Preparing your session",
+        LauncherMode.Failed => "",
         _ => ""
     };
 
-    public bool ShowProgressBar => Mode != LauncherMode.Launching;
+    public bool ShowProgressBar => Mode != LauncherMode.Launching && Mode != LauncherMode.Failed;
     public bool ShowSpinner => Mode == LauncherMode.Launching;
-    public bool ShowPause => Mode != LauncherMode.Launching;
+    public bool ShowPause => Mode != LauncherMode.Launching && Mode != LauncherMode.Failed;
+    public bool ShowError => Mode == LauncherMode.Failed;
 
     partial void OnModeChanged(LauncherMode value)
     {
@@ -49,6 +54,7 @@ public partial class StatusViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowProgressBar));
         OnPropertyChanged(nameof(ShowSpinner));
         OnPropertyChanged(nameof(ShowPause));
+        OnPropertyChanged(nameof(ShowError));
     }
 
     partial void OnGameTitleChanged(string value)
@@ -67,4 +73,7 @@ public partial class StatusViewModel : ObservableObject
 
     [RelayCommand]
     private void Cancel() => CancelRequested?.Invoke();
+
+    [RelayCommand]
+    private void Dismiss() => DismissRequested?.Invoke();
 }

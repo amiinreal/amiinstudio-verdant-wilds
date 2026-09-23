@@ -12,7 +12,7 @@ func run() -> void:
 	for child: Node in game.get_children():
 		if child is CanvasLayer and child.get_script()==preload("res://Adventure/intro.gd"): intro=child
 	check(intro!=null,"studio intro is present at startup")
-	check(ResourceLoader.exists("res://Adventure/generated/amiin_studio_intro.png"),"Blender logo render is available to the intro")
+	check(intro!=null and is_instance_valid(intro.card) and intro.card.get_meta("emblem",null)!=null,"logo emblem renders natively (no missing external asset)")
 	check(game.hud.page=="Welcome" and game.hud.menu_open,"title menu remains ready behind intro")
 	if intro!=null:
 		var key: InputEventKey=InputEventKey.new(); key.pressed=true; key.keycode=KEY_ENTER

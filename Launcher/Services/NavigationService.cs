@@ -95,6 +95,7 @@ public class NavigationService : ObservableObject
 
         var cancellation = new CancellationTokenSource();
         status.CancelRequested += () => cancellation.Cancel();
+        status.DismissRequested += () => { IsStatusVisible = false; Status = null; };
 
         try
         {
@@ -103,12 +104,13 @@ public class NavigationService : ObservableObject
                 status.Report(v.Percent, v.Text);
                 status.IsIndeterminate = v.Percent <= 0 && mode != LauncherMode.Launching;
             });
+            bool IsPaused() => status.IsPaused;
 
             if (action == "launcher")
             {
                 status.Mode = LauncherMode.Updating;
                 status.ProgressText = "Launcher update required first. The game update will follow after restart.";
-                var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter);
+                var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter, cancellationToken: cancellation.Token, isPaused: IsPaused);
                 SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
                 RequestCloseApplication?.Invoke();
                 return;
@@ -116,7 +118,7 @@ public class NavigationService : ObservableObject
 
             string gamePath;
             if (action == "game" || installedPackage?.sha256 != entry.package.sha256)
-                gamePath = await Updates.Install(entry.package, "game", channel, _state.Config.development, reporter, entry.id);
+                gamePath = await Updates.Install(entry.package, "game", channel, _state.Config.development, reporter, entry.id, cancellation.Token, IsPaused);
             else
                 gamePath = Updates.Installed("game", channel, entry.id).Item2!;
 
@@ -142,10 +144,20 @@ public class NavigationService : ObservableObject
             game.Status = GameStatus.Ready;
             game.Version = entry.package.version;
         }
+        catch (OperationCanceledException)
+        {
+            // User pressed Cancel; nothing went wrong, just close the overlay.
+        }
+        catch (Exception ex)
+        {
+            status.Mode = LauncherMode.Failed;
+            status.ErrorMessage = ex.Message;
+            IsStatusVisible = true;
+            return; // leave the overlay up so the user actually sees the error
+        }
         finally
         {
-            IsStatusVisible = false;
-            Status = null;
+            if (status.Mode != LauncherMode.Failed) { IsStatusVisible = false; Status = null; }
         }
     }
 
