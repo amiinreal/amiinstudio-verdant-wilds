@@ -111,7 +111,18 @@ public class NavigationService : ObservableObject
                 status.Mode = LauncherMode.Updating;
                 status.ProgressText = "Launcher update required first. The game update will follow after restart.";
                 var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter, cancellationToken: cancellation.Token, isPaused: IsPaused);
-                SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
+
+                status.ProgressText = "Starting the updated launcher...";
+                var updated = SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
+                // Windows (antivirus, Smart App Control) can kill a freshly-downloaded exe a
+                // moment after it starts. Never close this still-working copy until the new
+                // one has proven it's actually staying up -- otherwise a blocked update leaves
+                // the user with nothing running at all.
+                await Task.Delay(2000, cancellation.Token);
+                if (updated is null || updated.HasExited)
+                    throw new Exception("The updated launcher didn't stay open -- it may have been blocked or removed by antivirus or Smart App Control. " +
+                        "Your current version is unaffected and still works; check Windows Security, then try updating again.");
+
                 RequestCloseApplication?.Invoke();
                 return;
             }
@@ -164,9 +175,9 @@ public class NavigationService : ObservableObject
     // Windows (Smart App Control / WDAC / SmartScreen) can silently refuse to start an
     // unsigned or not-yet-reputable executable. Without this, that surfaced as an opaque
     // "Object reference not set to an instance of an object" further down the call chain.
-    private static void SafeStart(ProcessStartInfo info)
+    private static Process? SafeStart(ProcessStartInfo info)
     {
-        try { Process.Start(info); }
+        try { return Process.Start(info); }
         catch (Win32Exception ex)
         {
             throw new Exception("Windows blocked this file from running (its publisher isn't recognized yet). " +
