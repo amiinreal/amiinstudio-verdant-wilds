@@ -13,6 +13,7 @@ public partial class LibraryViewModel : ObservableObject
 
     public ObservableCollection<GameModel> Games => _state.Games;
     public GameModel? FeaturedGame => Games.FirstOrDefault();
+    public NavigationService Nav => _nav;
 
     [ObservableProperty] private string searchText = "";
     public string Username => _state.Username;
@@ -39,6 +40,9 @@ public partial class LibraryViewModel : ObservableObject
 
     [RelayCommand]
     private async Task Refresh() => await _nav.LoadLibraryAsync();
+
+    [RelayCommand]
+    private async Task UpdateLauncher() => await _nav.UpdateLauncherAsync();
 
     [RelayCommand]
     private async Task SignOut() => await _nav.SignOutAsync();

@@ -40,18 +40,32 @@
                        Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
 
             <TextBlock Text="EXPLORER NAME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,0,0,6"/>
-            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Height="42" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                     Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource PanelBrush}" CaretBrush="{StaticResource TextPrimaryBrush}"/>
+            <!-- No custom Style/ControlTemplate here on purpose: a ControlTemplate providing
+                 PART_ContentHost silently fails to render any typed text for TextBox/PasswordBox
+                 in this app (confirmed by extensive testing), no matter the color. The default
+                 template is the only configuration proven to reliably paint text, so rounding
+                 is done with a wrapping Border instead of a custom template. -->
+            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                         Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                         Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+            </Border>
 
             <TextBlock Text="PASSWORD · at least 12 characters" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"/>
-            <PasswordBox x:Name="PasswordInput" Height="42" shell:WindowChrome.IsHitTestVisibleInChrome="True" PasswordChanged="PasswordInput_PasswordChanged"
-                         Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource PanelBrush}" CaretBrush="{StaticResource TextPrimaryBrush}"/>
+            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
+                <PasswordBox x:Name="PasswordInput" shell:WindowChrome.IsHitTestVisibleInChrome="True" PasswordChanged="PasswordInput_PasswordChanged"
+                             Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                             Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+            </Border>
 
             <TextBlock Text="RECOVERY CODE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
                        Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
-            <TextBox Text="{Binding RecoveryCode, UpdateSourceTrigger=PropertyChanged}" Height="42" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                     Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource PanelBrush}" CaretBrush="{StaticResource TextPrimaryBrush}"
-                     Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
+                    Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}">
+                <TextBox Text="{Binding RecoveryCode, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                         Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                         Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+            </Border>
 
             <Grid Margin="0,18,0,0" Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVisInverse}}">
                 <Grid.ColumnDefinitions>

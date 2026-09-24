@@ -16,7 +16,7 @@ public record Configuration(string api, string publicKey, bool development = fal
 
 public static class Updates
 {
-    public const string Version = "0.3.3";
+    public const string Version = "0.3.5";
     public static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AmiinStudio");
     public static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
     public static readonly HttpClient Http = new(new HttpClientHandler { AllowAutoRedirect = true }) { Timeout = TimeSpan.FromMinutes(20) };

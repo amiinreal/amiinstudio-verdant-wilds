@@ -26,6 +26,12 @@ public class NavigationService : ObservableObject
     private bool _isStatusVisible;
     public bool IsStatusVisible { get => _isStatusVisible; private set => SetProperty(ref _isStatusVisible, value); }
 
+    private bool _launcherUpdateAvailable;
+    public bool LauncherUpdateAvailable { get => _launcherUpdateAvailable; private set => SetProperty(ref _launcherUpdateAvailable, value); }
+
+    private string _launcherLatestVersion = "";
+    public string LauncherLatestVersion { get => _launcherLatestVersion; private set => SetProperty(ref _launcherLatestVersion, value); }
+
     public NavigationService(AppState state, ApiService api)
     {
         _state = state; _api = api;
@@ -51,6 +57,9 @@ public class NavigationService : ObservableObject
         var envelope = await _api.Send("/releases/" + channel);
         var manifest = Updates.Verify(envelope.GetRawText(), _state.Config.publicKey, channel);
         _state.Manifest = manifest;
+
+        LauncherUpdateAvailable = manifest.launcher.version != Updates.Version;
+        LauncherLatestVersion = manifest.launcher.version;
 
         var keepId = _state.Games.FirstOrDefault()?.Id;
         _state.Games.Clear();
@@ -114,22 +123,8 @@ public class NavigationService : ObservableObject
 
             if (action == "launcher")
             {
-                status.Mode = LauncherMode.Updating;
                 status.ProgressText = "Launcher update required first. The game update will follow after restart.";
-                var exe = await Updates.Install(release.launcher, "launcher", "public", _state.Config.development, reporter, cancellationToken: cancellation.Token, isPaused: IsPaused);
-
-                status.ProgressText = "Starting the updated launcher...";
-                var updated = SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
-                // Windows (antivirus, Smart App Control) can kill a freshly-downloaded exe a
-                // moment after it starts. Never close this still-working copy until the new
-                // one has proven it's actually staying up -- otherwise a blocked update leaves
-                // the user with nothing running at all.
-                await Task.Delay(2000, cancellation.Token);
-                if (updated is null || updated.HasExited)
-                    throw new Exception("The updated launcher didn't stay open -- it may have been blocked or removed by antivirus or Smart App Control. " +
-                        "Your current version is unaffected and still works; check Windows Security, then try updating again.");
-
-                RequestCloseApplication?.Invoke();
+                await InstallAndRestartLauncherAsync(release.launcher, status, reporter, IsPaused, cancellation.Token);
                 return;
             }
 
@@ -138,6 +133,13 @@ public class NavigationService : ObservableObject
                 gamePath = await Updates.Install(entry.package, "game", channel, _state.Config.development, reporter, entry.id, cancellation.Token, IsPaused);
             else
                 gamePath = Updates.Installed("game", channel, entry.id).Item2!;
+
+            // Flip to Ready as soon as the files are actually on disk, not after the launch
+            // below also succeeds -- otherwise a launch failure (missing dependency, blocked
+            // by antivirus, whatever) leaves the library card stuck showing "Not installed"
+            // and the download icon even though the game genuinely did finish downloading.
+            game.Status = GameStatus.Ready;
+            game.Version = entry.package.version;
 
             status.Mode = LauncherMode.Launching;
             status.IsIndeterminate = true;
@@ -157,9 +159,6 @@ public class NavigationService : ObservableObject
             var pack = Path.Combine(start.WorkingDirectory, Path.GetFileNameWithoutExtension(entry.package.entry) + ".pck");
             if (File.Exists(pack)) { start.ArgumentList.Add("--main-pack"); start.ArgumentList.Add(pack); }
             SafeStart(start);
-
-            game.Status = GameStatus.Ready;
-            game.Version = entry.package.version;
         }
         catch (OperationCanceledException)
         {
@@ -176,6 +175,69 @@ public class NavigationService : ObservableObject
         {
             if (status.Mode != LauncherMode.Failed) { IsStatusVisible = false; Status = null; }
         }
+    }
+
+    /// <summary>Updates just the launcher, independent of any game -- used by the "Launcher
+    /// update available" banner so the user doesn't have to click Play on a game first.</summary>
+    public async Task UpdateLauncherAsync()
+    {
+        if (_state.Config is null) throw new Exception("Online service is not configured yet.");
+        var channel = _state.Channel; Updates.SafeName(channel);
+
+        var status = new StatusViewModel { GameTitle = "Amiin Studio Launcher", Mode = LauncherMode.Updating, ProgressText = "Checking for updates..." };
+        Status = status; IsStatusVisible = true;
+        var cancellation = new CancellationTokenSource();
+        status.CancelRequested += () => cancellation.Cancel();
+        status.DismissRequested += () => { IsStatusVisible = false; Status = null; };
+
+        try
+        {
+            var envelope = await _api.Send("/releases/" + channel);
+            var release = Updates.Verify(envelope.GetRawText(), _state.Config.publicKey, channel);
+            if (release.launcher.version == Updates.Version)
+            {
+                LauncherUpdateAvailable = false;
+                return; // someone else already updated it, or it was a stale banner
+            }
+
+            var reporter = new Progress<(double Percent, string Text)>(v =>
+            {
+                status.Report(v.Percent, v.Text);
+                status.IsIndeterminate = v.Percent <= 0;
+            });
+            await InstallAndRestartLauncherAsync(release.launcher, status, reporter, () => status.IsPaused, cancellation.Token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            status.Mode = LauncherMode.Failed;
+            status.ErrorMessage = ex.Message;
+            IsStatusVisible = true;
+            return;
+        }
+        finally
+        {
+            if (status.Mode != LauncherMode.Failed) { IsStatusVisible = false; Status = null; }
+        }
+    }
+
+    private async Task InstallAndRestartLauncherAsync(Package launcherPackage, StatusViewModel status, IProgress<(double, string)> reporter, Func<bool> isPaused, CancellationToken cancellationToken)
+    {
+        status.Mode = LauncherMode.Updating;
+        var exe = await Updates.Install(launcherPackage, "launcher", "public", _state.Config!.development, reporter, cancellationToken: cancellationToken, isPaused: isPaused);
+
+        status.ProgressText = "Starting the updated launcher...";
+        var updated = SafeStart(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = "--wait " + Environment.ProcessId });
+        // Windows (antivirus, Smart App Control) can kill a freshly-downloaded exe a
+        // moment after it starts. Never close this still-working copy until the new
+        // one has proven it's actually staying up -- otherwise a blocked update leaves
+        // the user with nothing running at all.
+        await Task.Delay(2000, cancellationToken);
+        if (updated is null || updated.HasExited)
+            throw new Exception("The updated launcher didn't stay open -- it may have been blocked or removed by antivirus or Smart App Control. " +
+                "Your current version is unaffected and still works; check Windows Security, then try updating again.");
+
+        RequestCloseApplication?.Invoke();
     }
 
     // Windows (Smart App Control / WDAC / SmartScreen) can silently refuse to start an

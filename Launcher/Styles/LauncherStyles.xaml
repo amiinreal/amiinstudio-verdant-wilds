@@ -16,6 +16,7 @@
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     <conv:NotInstalledToVisibilityConverter x:Key="NotInstalledToVis"/>
     <conv:InstalledToVisibilityConverter x:Key="InstalledToVis"/>
+    <conv:UpdateAvailableToVisibilityConverter x:Key="UpdateAvailableToVis"/>
     <conv:GameStatusColorConverter x:Key="StatusColorConverter"/>
     <conv:PauseLabelConverter x:Key="PauseLabelConverter"/>
 
@@ -216,68 +217,14 @@
 
     <!-- ===================== Search box / TextBox ===================== -->
 
-    <Style x:Key="SearchBoxStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style TargetType="TextBox">
-        <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Padding" Value="12,10"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style TargetType="PasswordBox">
-        <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Padding" Value="12,10"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush1}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="PasswordBox">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <!-- TextBox/PasswordBox/SearchBoxStyle used to live here, but a Style+ControlTemplate
+         providing PART_ContentHost silently fails to render any text when merged in from a
+         different XAML file than where the control is used (confirmed: the box still takes
+         input, since a UI Automation read-back proves Text/Password really updates, but paints
+         no glyphs, in any color). Button-style ContentPresenter templates from this same file
+         are unaffected; it's specific to the ScrollViewer-hosted text control wiring. Each view
+         that needs a TextBox/PasswordBox now defines its own local copy of this style instead
+         (see LoginView.xaml, LibraryView.xaml) rather than relying on one merged in here. -->
 
     <Style TargetType="ComboBox">
         <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
