@@ -124,6 +124,9 @@ func run() -> void:
 	await physics_frame
 	session.store.profile(1).inventory.meat = 0
 	session.store.profile(1).inventory.bone = 0
+	var wild_result: Dictionary = session.store.interact_animal(1, dog)
+	check(not wild_result.get("tamed", false) and not wild_result.get("affection", false), "an unfed wild animal is not tamed and gets no affection")
+	check(str(wild_result.get("reason", "")).contains("wild"), "wild animal explains how to tame it instead of a silent pet")
 	session.pet_animal()
 	check(not session.store.data.get("tamed", {}).has("dog_0"), "petting alone does not tame")
 	session.store.profile(1).inventory.bone = 1
@@ -146,6 +149,16 @@ func run() -> void:
 	for step: int in range(40):
 		session._physics_process(0.1)
 	check(dog.position.distance_to(actor.position) < far_distance, "tamed dog follows its owner")
+	check(dog.position.distance_to(actor.position) < 4.0, "tamed dog closes most of the gap within 4 seconds")
+	if DisplayServer.get_name() != "headless":
+		var camera2: Camera3D = game.get_node("Overview")
+		camera2.position = actor.position + Vector3(-2.5, 2.0, 2.5)
+		camera2.look_at(actor.position + Vector3.UP * 0.8)
+		camera2.make_current()
+		session.world.update_streaming(actor.position, [actor.position])
+		await create_timer(0.5).timeout
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://Adventure/qa/animal-follow.png")
 	var replica: Node3D = Node3D.new()
 	replica.set_script(load("res://Adventure/animals/population.gd"))
 	session.world.add_child(replica)

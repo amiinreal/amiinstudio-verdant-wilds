@@ -35,6 +35,7 @@ var _port: LineEdit
 var _map: Control
 var _scrim: ColorRect
 var hotbar_enabled: bool = true
+var _food_bar: ProgressBar
 var inventory_category: String = "All"
 var inventory_item: String = ""
 var _inventory_hash: int = 0
@@ -61,6 +62,13 @@ func _ready() -> void:
 		button.icon=Items.icon(HOTBAR[i]); button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",46); button.tooltip_text=HOTBAR[i].capitalize()
 		var number: Label=label(str(i+1),11,Color("e6dcc3")); number.position=Vector2(6,2); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(number); _slot_numbers.append(number)
 		var count: Label=label("",11); count.position=Vector2(38,49); count.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(count); _slot_counts.append(count)
+	var food_row: HBoxContainer = HBoxContainer.new(); food_row.add_theme_constant_override("separation", 8); _root.add_child(food_row)
+	food_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); food_row.offset_left=-274; food_row.offset_right=274; food_row.offset_top=-108; food_row.offset_bottom=-90
+	food_row.add_child(label("FOOD", 11, Color("d9c9a0")))
+	_food_bar = ProgressBar.new(); _food_bar.custom_minimum_size = Vector2(180, 12); _food_bar.show_percentage = false; _food_bar.min_value = 0; _food_bar.max_value = 100
+	_food_bar.add_theme_stylebox_override("background", style(Color(0.03, 0.06, 0.06, 0.9), 4))
+	var food_fill: StyleBoxFlat = style(Color(0.62, 0.78, 0.34, 0.95), 4); _food_bar.add_theme_stylebox_override("fill", food_fill)
+	food_row.add_child(_food_bar)
 	_prompt=label("",15,Color("eee5c5")); _root.add_child(_prompt); _prompt.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); _prompt.offset_left=-400; _prompt.offset_right=400; _prompt.offset_top=-188; _prompt.offset_bottom=-98
 	_prompt.add_theme_color_override("font_outline_color",Color("142524")); _prompt.add_theme_constant_override("outline_size",5)
@@ -225,9 +233,13 @@ func _process(delta: float) -> void:
 	_notice_time-=delta; _notice.visible=_notice_time>0
 	if session==null or not session.running: return
 	_hotbar.visible=not menu_open and hotbar_enabled
+	if _food_bar:
+		_food_bar.get_parent().visible = not menu_open and hotbar_enabled
+		_food_bar.value = float(session.local_profile.get("fullness", 50))
+		_food_bar.get_theme_stylebox("fill").bg_color = Color(0.78, 0.3, 0.28, 0.95) if _food_bar.value < 25 else Color(0.62, 0.78, 0.34, 0.95)
 	_controls.visible=not menu_open
 	var inv: Dictionary=session.local_profile.get("inventory",{})
-	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50))]):
+	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50)), str(session.local_profile.get("equipped", "hand"))]):
 		open_page("Inventory")
 	var names: Array[String]=["Axe","Pickaxe","Hammer","Wood","Stone","Fiber","Planks","Rope"]
 	for i in range(8):
@@ -255,7 +267,7 @@ func _process(delta: float) -> void:
 	if _map!=null and is_instance_valid(_map): _map.queue_redraw()
 
 func _inventory(content: VBoxContainer) -> void:
-	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50))])
+	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), str(session.local_profile.get("equipped", "hand"))])
 	content.add_child(label("EQUIPMENT  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),18))
 	content.add_child(label("E / I close inventory · H show / hide hotbar · Food " + str(int(session.local_profile.get("fullness", 50))) + " / 100", 14))
 	var visibility: CheckButton = CheckButton.new()
@@ -297,6 +309,10 @@ func _inventory(content: VBoxContainer) -> void:
 		content.add_child(actions)
 		if inventory_item == "cooked_meat": button("Eat one", func() -> void: session.inventory_action(inventory_item, "eat"), actions)
 		elif inventory_item == "meat": button("Cook at fire", func() -> void: session.craft("cooked_meat"); close_menu(), actions)
+		if inventory_item in ["axe", "pickaxe", "hammer"]:
+			var equipped: String = str(session.local_profile.get("equipped", "hand"))
+			if equipped == inventory_item: button("Unequip (use hands)", func() -> void: session.equip("hand"), actions)
+			else: button("Equip", func() -> void: session.equip(inventory_item), actions)
 		button("Remove one", func() -> void: session.inventory_action(inventory_item, "discard"), actions)
 	button("Back to game", close_menu, content)
 

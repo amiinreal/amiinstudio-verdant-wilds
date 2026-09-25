@@ -749,7 +749,7 @@ func _interact_animal(id: int, animal_id: String) -> void:
 	if not _animal_in_reach(id, animal): return
 	var result: Dictionary = store.interact_animal(id, animal)
 	_economy_result(id, result)
-	if result.ok: _broadcast_affection(animal_id)
+	if result.ok and bool(result.get("affection", false)): _broadcast_affection(animal_id)
 
 func _broadcast_affection(animal_id: String) -> void:
 	_show_affection(animal_id)

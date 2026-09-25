@@ -299,19 +299,22 @@ func hit_animal(peer: int, animal: Node3D, now: float) -> Dictionary:
 	elif hp == 0: result_text = animal.species.capitalize() + " defeated."
 	return {"ok":true, "reason":result_text}
 
-## Petting is always free; feeding a cat or dog a bone (preferred) or meat tames it for life.
+## Cows are always a free, affectionate pet. Cats and dogs are wild until fed a bone
+## (preferred) or meat, which tames them for life; only after that does petting them
+## do anything -- a wild animal has no bond yet, so it gets no heart popup.
 func interact_animal(peer: int, animal: Node3D) -> Dictionary:
 	var p: Dictionary = profile(peer)
 	if p.is_empty(): return Build.fail("Not signed in.")
 	if not data.has("tamed"): data["tamed"] = {}
 	var already_tamed: bool = data.tamed.has(animal.animal_id)
-	if animal.species != "cow" and not already_tamed:
-		var feed_item: String = "bone" if int(p.inventory.get("bone", 0)) > 0 else ("meat" if int(p.inventory.get("meat", 0)) > 0 else "")
-		if not feed_item.is_empty():
-			p.inventory[feed_item] = int(p.inventory[feed_item]) - 1
-			data.tamed[animal.animal_id] = p.id
-			return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true}
-	return {"ok":true, "reason":("You pet your " if already_tamed else "You pet the ") + animal.species + "."}
+	if animal.species == "cow" or already_tamed:
+		return {"ok":true, "reason":("You pet your " if already_tamed else "You pet the ") + animal.species + ".", "affection":true}
+	var feed_item: String = "bone" if int(p.inventory.get("bone", 0)) > 0 else ("meat" if int(p.inventory.get("meat", 0)) > 0 else "")
+	if feed_item.is_empty():
+		return {"ok":true, "reason":"This " + animal.species + " is wild. Feed it a bone or meat (hold one, then press T) to tame it.", "affection":false}
+	p.inventory[feed_item] = int(p.inventory[feed_item]) - 1
+	data.tamed[animal.animal_id] = p.id
+	return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true, "affection":true}
 
 func inventory_action(peer: int, item: String, action: String, now: float) -> Dictionary:
 	var p: Dictionary = profile(peer)

@@ -5,6 +5,11 @@ const MODELS: Dictionary = {
 	"dog": preload("res://Adventure/animals/dog.glb"),
 	"cow": preload("res://Adventure/animals/cow.glb")
 }
+## Real-world m/s for a tamed pet chasing its owner. stride_speed (below) is NOT this --
+## it is back-solved from an authored short trip's fixed animation duration, so reusing it
+## for following made pets crawl at a fraction of the player's 3.8-7.5 m/s walk/run speed.
+## These are a little faster than the player's sprint (7.5) so a lagging pet can catch up.
+const FOLLOW_SPEED: Dictionary = {"cat": 7.5, "dog": 8.5}
 var animator: AnimationPlayer
 var species: String
 var world: Node3D
@@ -89,17 +94,23 @@ func follow(target: Vector3, delta: float) -> void:
 	var distance: float = to_target.length()
 	var stop_radius: float = 1.6
 	var moving: bool = distance > stop_radius
+	var trotting: bool = distance > 6.0
 	if moving:
 		var direction: Vector3 = to_target / distance
-		var step: float = minf(stride_speed * 1.15 * delta, distance - stop_radius)
+		var speed: float = FOLLOW_SPEED.get(species, 7.5) * (1.4 if trotting else 1.0)
+		var step: float = minf(speed * delta, distance - stop_radius)
 		var next_xz: Vector2 = Vector2(position.x, position.z) + Vector2(direction.x, direction.z) * step
 		position = Vector3(next_xz.x, world.height_at(next_xz), next_xz.y)
 		rotation.y = atan2(-direction.x, -direction.z)
+	elif distance > 0.3:
+		# Standing near its owner: turn to face them instead of freezing at the last heading.
+		var facing: Vector3 = to_target / distance
+		rotation.y = lerp_angle(rotation.y, atan2(-facing.x, -facing.z), 1.0 - exp(-delta * 6.0))
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	visible = camera == null or global_position.distance_squared_to(camera.global_position) < 120.0 * 120.0
 	if animator:
 		animator.active = visible
-		var clip: StringName = &"walk" if moving else &"idle"
+		var clip: StringName = (&"trot" if trotting else &"walk") if moving else &"idle"
 		if animator.current_animation != clip: animator.play(clip, 0.20)
 
 func _process(delta: float) -> void:
