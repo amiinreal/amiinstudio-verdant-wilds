@@ -21,6 +21,7 @@ var _resume_token: String = ""
 var world: Node3D
 var state: Dictionary = Rules.fresh_state(73129)
 var players: Dictionary = {}
+var _owner_profile: Dictionary = {}
 var running: bool = false
 var online: bool = false
 var save_enabled: bool = true
@@ -127,6 +128,7 @@ func start_solo(seed_value: int, display_name: String, resume: bool = false) -> 
 	_prepare_world()
 	store.enter(1, "", true)
 	_publish_profile(1)
+	_owner_profile[1] = store.profile(1).get("id", "")
 	_spawn(1, local_name, world.spawn_position(0))
 	running = true
 	status = "Solo world"
@@ -150,6 +152,7 @@ func host_game(seed_value: int, port: int, display_name: String) -> Error:
 	_prepare_world()
 	store.enter(1, "", true)
 	_publish_profile(1)
+	_owner_profile[1] = store.profile(1).get("id", "")
 	_spawn(1, local_name, world.spawn_position(0))
 	running = true
 	status = "Hosting · UDP %d" % port
@@ -204,6 +207,7 @@ func _clear_players() -> void:
 		remove_child(body)
 		body.queue_free()
 	players.clear()
+	_owner_profile.clear()
 
 func _prepare_world() -> void:
 	preload("res://Adventure/loading_screen.gd").history.clear()
@@ -308,7 +312,8 @@ func _client_loaded() -> void:
 func _send_roster() -> void:
 	var roster: Dictionary = {}
 	for id: int in players:
-		roster[id] = {"name": players[id].nickname, "p": players[id].position}
+		roster[id] = {"name": players[id].nickname, "p": players[id].position, "profile": store.profile(id).get("id", "")}
+		_owner_profile[id] = roster[id]["profile"]
 	for peer: int in _ready_peers:
 		_receive_roster.rpc_id(peer, roster)
 	state_changed.emit()
@@ -319,8 +324,10 @@ func _receive_roster(roster: Dictionary) -> void:
 		if not roster.has(id):
 			players[id].queue_free()
 			players.erase(id)
+			_owner_profile.erase(id)
 	for id: int in roster:
 		_spawn(id, roster[id]["name"], roster[id]["p"])
+		_owner_profile[id] = roster[id].get("profile", "")
 	state_changed.emit()
 
 func _peer_left(id: int) -> void:
@@ -375,6 +382,11 @@ func _physics_process(delta: float) -> void:
 	if not running:
 		return
 	clock_time += delta
+	if is_instance_valid(world.wildlife):
+		var owners: Dictionary = {}
+		for peer_id: int in players:
+			if _owner_profile.has(peer_id): owners[_owner_profile[peer_id]] = players[peer_id].position
+		world.wildlife.tick(clock_time, delta, owners)
 	state["day_time"]=fposmod(float(state.get("day_time",0.32))+delta/1200.0,1.0)
 	_stream_timer+=delta
 	if _stream_timer>0.4 and local_player()!=null:
@@ -549,6 +561,11 @@ func nearest_resource(id: int, matching_tool: bool=true) -> String:
 	return nearest
 
 func gather() -> void:
+	var animal: Node3D = nearest_animal(local_id())
+	if animal != null:
+		if is_authority(): _attack_animal(1, animal.animal_id)
+		else: _attack_animal_request.rpc_id(1, animal.animal_id)
+		return
 	var id: String=nearest_resource(local_id())
 	if id.is_empty():
 		var nearby: String=nearest_resource(local_id(),false)
@@ -591,6 +608,9 @@ func _craft(id: int, recipe: String) -> void:
 	_actions[id]={"type":"craft","recipe":recipe,"origin":players[id].position,"due":clock_time+data.craft_time}
 	var work_target: Vector3=players[id].position+Basis(Vector3.UP,players[id].facing)*Vector3(0,0,-0.7)
 	if not data.required_station.is_empty():
+		if data.required_station == "cooking_fire":
+			for position: Vector3 in world.cooking_stations:
+				if position.distance_to(players[id].position) < 3.0: work_target = position; break
 		for record: Dictionary in store.data.structures:
 			var station_position: Vector3=preload("res://Adventure/construction.gd").position(record)
 			if record.module_id==data.required_station and station_position.distance_to(players[id].position)<3: work_target=station_position; break
@@ -643,6 +663,9 @@ func _gather_feedback(id: int, kind: String, position: Vector3) -> void:
 
 func _station_available(id: int, station: String) -> bool:
 	if station.is_empty(): return true
+	if station == "cooking_fire":
+		for position: Vector3 in world.cooking_stations:
+			if position.distance_to(players[id].position) < 3.0: return true
 	for record: Dictionary in store.data.structures:
 		if record.module_id==station and preload("res://Adventure/construction.gd").position(record).distance_to(players[id].position)<3: return true
 	return false
@@ -660,12 +683,97 @@ func _tick_actions() -> void:
 			var result: Dictionary=store.gather(id,job.resource,players[id].position,world,clock_time)
 			_economy_result(id,result)
 			if result.ok: _emit_impact(world.resources[job.resource].p,world.resources[job.resource].kind)
+		elif job.type=="attack":
+			if store.profile(id).get("equipped", "hand") != job.tool: continue
+			var animal: Node3D = world.wildlife.find_animal(job.animal)
+			if not _animal_in_reach(id, animal): continue
+			_economy_result(id, store.hit_animal(id, animal, clock_time))
 		else:
 			var data: Resource=preload("res://Adventure/items.gd").recipes()[job.recipe].data
 			if not _station_available(id,data.required_station): _private_message(id,"Craft cancelled: station out of reach."); continue
 			var result: Dictionary=store.craft(id,job.recipe,clock_time)
 			_economy_result(id,result)
 			if result.ok: _emit_impact(players[id].position+Basis(Vector3.UP,players[id].facing)*Vector3(0,0,-0.6),data.effect_type)
+
+func nearest_animal(id: int) -> Node3D:
+	if not running or not players.has(id) or not is_instance_valid(world.wildlife): return null
+	var result: Node3D = null
+	var distance: float = 3.0
+	for animal: Node3D in world.wildlife.get_children():
+		var d: float = players[id].position.distance_to(animal.position)
+		if d < distance and _animal_in_reach(id, animal):
+			result = animal
+			distance = d
+	return result
+
+func _animal_in_reach(id: int, animal: Node3D) -> bool:
+	if animal == null or animal.health <= 0 or not players.has(id): return false
+	var body: CharacterBody3D = players[id]
+	if body.position.distance_to(animal.position) > 3.0: return false
+	var direction: Vector3 = animal.position - body.position
+	direction.y = 0.0
+	if direction.length() > 0.5 and (Basis(Vector3.UP, body.facing) * Vector3.FORWARD).dot(direction.normalized()) < 0.35: return false
+	var target: Vector3 = animal.position + Vector3.UP * (0.65 if animal.species == "cow" else 0.3)
+	var ray: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(body.position + Vector3.UP, target, 5)
+	ray.exclude = [body.get_rid()]
+	return world.get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
+
+@rpc("any_peer", "call_remote", "reliable")
+func _attack_animal_request(animal_id: String) -> void:
+	if is_authority(): _attack_animal(multiplayer.get_remote_sender_id(), animal_id)
+
+func _attack_animal(id: int, animal_id: String) -> void:
+	if not running or not players.has(id) or _actions.has(id) or players[id].swimming: return
+	if not is_instance_valid(world.wildlife) or clock_time < float(store.cooldowns.get(id, 0)): return
+	var animal: Node3D = world.wildlife.find_animal(animal_id)
+	if not _animal_in_reach(id, animal): return
+	var tool: String = store.profile(id).get("equipped", "hand")
+	_actions[id] = {"type":"attack", "animal":animal_id, "origin":players[id].position, "due":clock_time + 0.4, "tool":tool}
+	_start_action(id, "AxeSwing" if tool == "axe" else ("PickaxeSwing" if tool == "pickaxe" else "HammerBuild"), animal.position, 0.8)
+
+## Pet a nearby animal (free), or feed it a bone/meat to tame a cat or dog for life.
+func pet_animal() -> void:
+	var animal: Node3D = nearest_animal(local_id())
+	if animal == null:
+		message.emit("Move closer to a cat, dog or cow to pet or feed it."); return
+	if is_authority(): _interact_animal(1, animal.animal_id)
+	else: _interact_animal_request.rpc_id(1, animal.animal_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _interact_animal_request(animal_id: String) -> void:
+	if is_authority(): _interact_animal(multiplayer.get_remote_sender_id(), animal_id)
+
+func _interact_animal(id: int, animal_id: String) -> void:
+	if not running or not players.has(id) or not is_instance_valid(world.wildlife): return
+	var animal: Node3D = world.wildlife.find_animal(animal_id)
+	if not _animal_in_reach(id, animal): return
+	var result: Dictionary = store.interact_animal(id, animal)
+	_economy_result(id, result)
+	if result.ok: _broadcast_affection(animal_id)
+
+func _broadcast_affection(animal_id: String) -> void:
+	_show_affection(animal_id)
+	for peer: int in _ready_peers: _show_affection.rpc_id(peer, animal_id)
+
+@rpc("authority", "call_remote", "reliable")
+func _show_affection(animal_id: String) -> void:
+	if not is_instance_valid(world) or not is_instance_valid(world.wildlife): return
+	var animal: Node3D = world.wildlife.find_animal(animal_id)
+	if animal != null: animal.show_affection()
+
+func inventory_action(item: String, action: String) -> void:
+	if is_authority(): _inventory_action(1, item, action)
+	else: _inventory_action_request.rpc_id(1, item, action)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _inventory_action_request(item: String, action: String) -> void:
+	if is_authority(): _inventory_action(multiplayer.get_remote_sender_id(), item, action)
+
+func _inventory_action(id: int, item: String, action: String) -> void:
+	if not running or not players.has(id) or _actions.has(id): return
+	var result: Dictionary = store.inventory_action(id, item, action, clock_time)
+	if result.ok: players[id].equip(store.profile(id).get("equipped", "hand"))
+	_economy_result(id, result)
 
 func _start_action(id: int, animation: String, target: Vector3, duration: float) -> void:
 	_action_feedback(id,animation,target,duration)

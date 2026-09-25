@@ -51,7 +51,7 @@ func enter_account(peer: int, account_id: String) -> Dictionary:
 	return {"id": stable}
 
 func public_delta() -> Dictionary:
-	return {"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true)}
+	return {"animals":data.get("animals",{}).duplicate(true),"tamed":data.get("tamed",{}).duplicate(true),"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true)}
 
 func view(peer: int) -> Dictionary:
 	var p: Dictionary=profile(peer).duplicate(true)
@@ -129,6 +129,7 @@ static func pay(p: Dictionary, cost: Dictionary) -> void:
 func tick(peer: int, actor: Vector3, distance: float, delta: float, world: Node3D) -> void:
 	var p: Dictionary=profile(peer)
 	if p.is_empty(): return
+	p["fullness"] = maxf(0.0, float(p.get("fullness", 50)) - delta / 30.0)
 	p["stats"]["playtime"]+=delta
 	p["stats"]["distance"]+=clampf(distance,0,20*delta)
 	var pos: Vector2=Vector2(actor.x,actor.z)
@@ -210,8 +211,18 @@ func load_world(seed_value: int) -> bool:
 static func valid_save(value: Variant, seed_value: int) -> bool:
 	if not value is Dictionary: return false
 	if value.get("schema")!=3 or value.get("seed")!=seed_value: return false
+	var animals: Variant = value.get("animals", {})
+	if not animals is Dictionary or animals.size() > 9: return false
+	for key: Variant in animals:
+		if not key is String or not (key in ["cat_0", "cat_1", "cat_2", "dog_0", "dog_1", "dog_2", "cow_0", "cow_1", "cow_2"]): return false
+		if not (animals[key] is int or animals[key] is float) or not is_finite(float(animals[key])) or float(animals[key]) < 0 or float(animals[key]) > 100: return false
 	for key: String in ["profiles","resources","world"]:
 		if not value.get(key) is Dictionary: return false
+	var tamed: Variant = value.get("tamed", {})
+	if not tamed is Dictionary or tamed.size() > 9: return false
+	for key: Variant in tamed:
+		if not key is String or not (key in ["cat_0", "cat_1", "cat_2", "dog_0", "dog_1", "dog_2"]): return false
+		if not tamed[key] is String or not value["profiles"].has(tamed[key]): return false
 	if not value.get("structures") is Array or value["structures"].size()>12000: return false
 	var edits: Variant=value.get("terrain_edits",{})
 	if not edits is Dictionary or edits.size()>66049: return false
@@ -245,23 +256,75 @@ static func valid_save(value: Variant, seed_value: int) -> bool:
 		if not value["profiles"].has(r["owner_id"]): return false
 	for p: Variant in value["profiles"].values():
 		if not p is Dictionary: return false
+		var fullness: Variant = p.get("fullness", 50)
+		if not (fullness is int or fullness is float) or not is_finite(float(fullness)) or float(fullness) < 0 or float(fullness) > 100: return false
 		for key: String in ["inventory","stats","houses"]:
 			if not p.get(key) is Dictionary: return false
 		for key: String in ["regions","landmarks","hidden","bridges","discovered_structures","achievements"]:
 			if not p.get(key) is Array: return false
 		for key: String in ["wood","stone","fiber","planks","rope"]:
 			if not p["inventory"].has(key) or float(p["inventory"][key])<0: return false
+		for food: String in ["meat", "cooked_meat", "bone"]:
+			var amount: Variant = p["inventory"].get(food, 0)
+			if not (amount is int or amount is float) or not is_finite(float(amount)) or float(amount) < 0 or float(amount) != floorf(float(amount)): return false
 		for key: String in ["playtime","sessions","distance","resources_gathered","wood_gathered","stone_gathered","fiber_gathered","items_crafted","components_placed"]:
 			if not p["stats"].has(key): return false
 	return true
 
 func _normalize_profiles() -> void:
 	for p: Dictionary in data["profiles"].values():
+		if not p.has("fullness"): p["fullness"] = 50
 		for tool: String in ["axe","pickaxe","hammer"]:
 			if not p["inventory"].has(tool): p["inventory"][tool]=1
 		if not p.has("equipped"): p["equipped"]="axe"
 		for stat: String in ["tools_crafted","worlds_joined","multiplayer_sessions"]:
 			if not p["stats"].has(stat): p["stats"][stat]=0
+
+func hit_animal(peer: int, animal: Node3D, now: float) -> Dictionary:
+	var p: Dictionary = profile(peer)
+	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait for your next swing.")
+	if not data.has("animals"): data["animals"] = {}
+	var hp: int = int(data.animals.get(animal.animal_id, 100 if animal.species == "cow" else 50))
+	if hp <= 0: return Build.fail("This animal is already gone.")
+	var tool_id: String = p.get("equipped", "hand")
+	if tool_id != "hand" and int(p.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
+	hp = maxi(0, hp - (30 if tool_id in ["axe", "pickaxe"] else 15))
+	data.animals[animal.animal_id] = hp
+	cooldowns[peer] = now + 0.5
+	var result_text: String = animal.species.capitalize() + " hit · " + str(hp) + " health"
+	if hp == 0 and animal.species == "cow":
+		p.inventory["meat"] = int(p.inventory.get("meat", 0)) + 3
+		p.inventory["bone"] = int(p.inventory.get("bone", 0)) + 1
+		result_text = "Cow harvested · +3 meat, +1 bone added to Food in your inventory"
+	elif hp == 0: result_text = animal.species.capitalize() + " defeated."
+	return {"ok":true, "reason":result_text}
+
+## Petting is always free; feeding a cat or dog a bone (preferred) or meat tames it for life.
+func interact_animal(peer: int, animal: Node3D) -> Dictionary:
+	var p: Dictionary = profile(peer)
+	if p.is_empty(): return Build.fail("Not signed in.")
+	if not data.has("tamed"): data["tamed"] = {}
+	var already_tamed: bool = data.tamed.has(animal.animal_id)
+	if animal.species != "cow" and not already_tamed:
+		var feed_item: String = "bone" if int(p.inventory.get("bone", 0)) > 0 else ("meat" if int(p.inventory.get("meat", 0)) > 0 else "")
+		if not feed_item.is_empty():
+			p.inventory[feed_item] = int(p.inventory[feed_item]) - 1
+			data.tamed[animal.animal_id] = p.id
+			return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true}
+	return {"ok":true, "reason":("You pet your " if already_tamed else "You pet the ") + animal.species + "."}
+
+func inventory_action(peer: int, item: String, action: String, now: float) -> Dictionary:
+	var p: Dictionary = profile(peer)
+	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait a moment.")
+	if action not in ["eat", "discard"] or int(p.inventory.get(item, 0)) < 1: return Build.fail("You do not have that item.")
+	if action == "eat":
+		if item != "cooked_meat": return Build.fail("Cook raw meat at a cooking fire first." if item == "meat" else "This item is not food.")
+		if int(p.get("fullness", 50)) >= 100: return Build.fail("You are already full.")
+		p.fullness = mini(100, int(p.get("fullness", 50)) + 40)
+	p.inventory[item] = int(p.inventory[item]) - 1
+	if p.inventory[item] == 0 and p.get("equipped", "hand") == item: p.equipped = "hand"
+	cooldowns[peer] = now + 0.3
+	return {"ok":true, "reason":("Ate grilled meat · +40 food" if action == "eat" else "Removed one " + item + " from inventory.")}
 
 func equip(peer: int,tool: String) -> Dictionary:
 	var p: Dictionary=profile(peer)

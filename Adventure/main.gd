@@ -41,10 +41,13 @@ func _build_selected(index: int) -> void:
 	hud.close_menu()
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_E and session.running and (not hud.menu_open or hud.page=="Inventory"):
+	if event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode in [KEY_E, KEY_I] or event.keycode in [KEY_E, KEY_I]) and session.running and not get_viewport().gui_get_focus_owner() is LineEdit:
 		builder.enabled=false; session.build_hint=""
 		if hud.menu_open and hud.page=="Inventory": hud.close_menu()
 		else: hud.open_page("Inventory")
+		get_viewport().set_input_as_handled(); return
+	if event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode == KEY_H or event.keycode == KEY_H) and session.running and not get_viewport().gui_get_focus_owner() is LineEdit:
+		hud.set_hotbar_visible(not hud.hotbar_enabled)
 		get_viewport().set_input_as_handled(); return
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_B and hud.menu_open and hud.page=="Build" and not get_viewport().gui_get_focus_owner() is LineEdit:
 		hud.close_menu(); builder.enabled=false; session.build_hint=""; get_viewport().set_input_as_handled(); return
@@ -85,6 +88,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			var actor: CharacterBody3D=session.local_player()
 			if actor!=null: session.flatten_land(builder.candidate if builder.enabled and builder.ghost!=null and builder.ghost.visible else actor.position)
 		elif key==KEY_G or key==KEY_Q: session.gather()
+		elif key==KEY_T and not builder.enabled: session.pet_animal()
 		elif key==KEY_SPACE: _jump=true
 		elif key==KEY_DELETE and builder.enabled and session.has_method("remove_nearest"): session.remove_nearest()
 

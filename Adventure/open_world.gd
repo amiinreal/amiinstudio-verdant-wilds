@@ -7,6 +7,8 @@ const Ecology := preload("res://Adventure/ecology.gd")
 const Streamer := preload("res://Adventure/world_streamer.gd")
 const WIND := preload("res://Adventure/wind.gdshader")
 var meadow: Node3D
+var wildlife: Node3D
+var cooking_stations: Array[Vector3] = []
 var terrain_edits: Dictionary={}
 var extra_resource_nodes: Dictionary={}
 var wind_materials: Array[ShaderMaterial]=[]
@@ -85,10 +87,17 @@ func build(new_seed: int,landscape_version: int=2) -> void:
 	_root.add_child(placed_root)
 	preload("res://Adventure/loading_screen.gd").show_progress(82,"Loading nearby models and collision…")
 	_flush_instances()
+	cooking_stations.clear()
+	var cooking: Node3D = Node3D.new()
+	cooking.set_script(preload("res://Adventure/cooking/village_cooking.gd"))
+	_root.add_child(cooking)
+	cooking.setup(self)
+	_update_grass_mask()
 	var animals: Node3D = Node3D.new()
 	animals.set_script(preload("res://Adventure/animals/population.gd"))
 	_root.add_child(animals)
 	animals.setup(self)
+	wildlife = animals
 	preload("res://Adventure/loading_screen.gd").show_progress(95,"Drawing the map…")
 	_map_image()
 	show()
@@ -492,6 +501,9 @@ func apply_state(state: Dictionary, _animate: bool=true) -> void:
 	if state.has("world_delta"): apply_delta(state["world_delta"])
 
 func apply_delta(delta: Dictionary) -> void:
+	if is_instance_valid(wildlife):
+		wildlife.apply_state(delta.get("animals", {}))
+		wildlife.apply_tamed(delta.get("tamed", {}))
 	apply_terrain_edits(delta.get("terrain_edits",{}))
 	changed_resources=delta.get("resources",{}).duplicate()
 	structure_records=delta.get("structures",[]).duplicate(true)
@@ -645,6 +657,8 @@ func _update_grass_mask() -> void:
 			_mask_box(image,AABB(Vector3(cell.x*2-1.2,0,cell.y*2-1.2),Vector3(2.4,1,2.4)))
 	for clearing: Array in grass_clearings.values():
 		_mask_box(image,AABB(Vector3(float(clearing[0])-3,0,float(clearing[1])-3),Vector3(6,1,6)))
+	for station: Vector3 in cooking_stations:
+		_mask_box(image, AABB(station - Vector3(1.1, 0, 1.1), Vector3(2.2, 1, 2.2)))
 	grass_mask_image=image
 	grass_mask.update(image)
 

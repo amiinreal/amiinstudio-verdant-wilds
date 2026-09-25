@@ -34,8 +34,14 @@ var _address: LineEdit
 var _port: LineEdit
 var _map: Control
 var _scrim: ColorRect
+var hotbar_enabled: bool = true
+var inventory_category: String = "All"
+var inventory_item: String = ""
+var _inventory_hash: int = 0
 
 func _ready() -> void:
+	var preferences: ConfigFile = ConfigFile.new()
+	if preferences.load("user://inventory_ui.cfg") == OK: hotbar_enabled = bool(preferences.get_value("ui", "hotbar", true))
 	_root=Control.new(); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(_root)
 	_scrim=ColorRect.new(); _scrim.color=Color(0.02,0.045,0.045,0.6); _scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _scrim.mouse_filter=Control.MOUSE_FILTER_IGNORE; _scrim.hide(); _root.add_child(_scrim)
 	_panel=PanelContainer.new(); _panel.add_theme_stylebox_override("panel",style(Color(0.035,0.095,0.11,0.95),26)); _root.add_child(_panel)
@@ -62,8 +68,8 @@ func _ready() -> void:
 	_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP); _notice.offset_left=-400; _notice.offset_right=400; _notice.offset_top=30; _notice.offset_bottom=65
 	_notice.add_theme_color_override("font_outline_color",Color("142524")); _notice.add_theme_constant_override("outline_size",5)
 	_controls=PanelContainer.new(); _controls.add_theme_stylebox_override("panel",style(Color(0.018,0.05,0.06,0.88),12)); _root.add_child(_controls)
-	_controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT); _controls.offset_left=16; _controls.offset_right=220; _controls.offset_top=-325; _controls.offset_bottom=-100; _controls.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	_controls.add_child(label("W A S D   Move\nMouse     Look\nSpace     Jump / surface\nShift     Run / swim faster\nLMB / Q   Use tool\n1–8       Select item\nE         Inventory\nB         Build catalog\nC         Clear grass\nV         Flatten land\nEsc       Menu",12,Color("dddacb")))
+	_controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT); _controls.offset_left=16; _controls.offset_right=220; _controls.offset_top=-345; _controls.offset_bottom=-100; _controls.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	_controls.add_child(label("W A S D   Move\nMouse     Look\nSpace     Jump / surface\nShift     Run / swim faster\nLMB / Q   Use tool\nT         Pet / feed animal\n1–8       Select item\nE         Inventory\nB         Build catalog\nC         Clear grass\nV         Flatten land\nEsc       Menu",12,Color("dddacb")))
 	_controls.hide(); _hotbar.hide(); _prompt.hide()
 
 func style(color: Color,padding: int=12) -> StyleBoxFlat:
@@ -88,7 +94,7 @@ func bind_session(value: Node3D) -> void:
 		if menu_open and page == "Welcome": open_page("Welcome"))
 
 func started() -> void:
-	close_menu(); _hotbar.show(); show_message("WASD move · Mouse look · Shift run · E inventory · C clear grass · Esc menu",8)
+	close_menu(); _hotbar.visible = hotbar_enabled; show_message("WASD move · Mouse look · Shift run · E/I inventory · H hotbar · Esc menu",8)
 
 func stopped() -> void:
 	_controls.hide(); _hotbar.hide(); _prompt.hide(); open_page("Welcome")
@@ -100,11 +106,20 @@ func toggle_menu() -> void:
 	else: open_page("Camp")
 func close_menu() -> void:
 	menu_open=false; _panel.hide(); _scrim.hide(); Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
+	_hotbar.visible = session != null and session.running and hotbar_enabled
+
+func set_hotbar_visible(value: bool) -> void:
+	hotbar_enabled = value
+	_hotbar.visible = value and not menu_open and session.running
+	var preferences: ConfigFile = ConfigFile.new()
+	preferences.set_value("ui", "hotbar", value)
+	preferences.save("user://inventory_ui.cfg")
 func show_message(text: String,duration: float=4) -> void:
 	_notice.text=text; _notice_time=duration
 
 func open_page(value: String) -> void:
 	page=value; menu_open=true; _panel.show(); _scrim.show(); Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+	_hotbar.hide()
 	for child: Node in _body.get_children(): _body.remove_child(child); child.queue_free()
 	_map=null
 	var heading: HBoxContainer=HBoxContainer.new(); _body.add_child(heading)
@@ -133,10 +148,11 @@ func open_page(value: String) -> void:
 		_inventory(content)
 	elif page=="Crafting":
 		content.add_child(label("Choose a recipe. Crafting takes time; move away to cancel.",14,Color("adc4b5")))
+		content.add_child(label("Cooking: stand beside a village cooking fire, or build one from Crafting in the build catalog.", 14))
 		for recipe: String in preload("res://Adventure/items.gd").recipes():
 			var id: String=recipe
 			var data: Resource=preload("res://Adventure/items.gd").recipes()[id].data
-			button("Craft "+data.display_name+" · "+str(data.ingredients)+" · "+str(data.craft_time)+" s",func() -> void: session.craft(id); close_menu(),content)
+			button(("Cook " if data.required_station == "cooking_fire" else "Craft ")+data.display_name+" · "+str(data.ingredients)+" · "+str(data.craft_time)+" s"+(" · needs cooking fire" if data.required_station == "cooking_fire" else ""),func() -> void: session.craft(id); close_menu(),content)
 
 	elif page=="Build":
 		var catalog: VBoxContainer=VBoxContainer.new(); catalog.set_script(preload("res://Adventure/build_catalog.gd")); content.add_child(catalog); catalog.setup(self)
@@ -208,9 +224,11 @@ func _valid() -> bool:
 func _process(delta: float) -> void:
 	_notice_time-=delta; _notice.visible=_notice_time>0
 	if session==null or not session.running: return
-	_hotbar.visible=not menu_open
+	_hotbar.visible=not menu_open and hotbar_enabled
 	_controls.visible=not menu_open
 	var inv: Dictionary=session.local_profile.get("inventory",{})
+	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50))]):
+		open_page("Inventory")
 	var names: Array[String]=["Axe","Pickaxe","Hammer","Wood","Stone","Fiber","Planks","Rope"]
 	for i in range(8):
 		_slots[i].text=""
@@ -222,7 +240,10 @@ func _process(delta: float) -> void:
 		_context_timer=0
 		var id: String=session.nearest_resource(session.local_id(),false)
 		_context=""
-		if not id.is_empty():
+		var animal: Node3D = session.nearest_animal(session.local_id())
+		if animal != null:
+			_context = "LMB / Q · Hit " + animal.species + " · " + str(animal.health) + " health" + (" · yields meat" if animal.species == "cow" else "")
+		elif not id.is_empty():
 			var kind: String=session.world.resources[id].kind
 			var selected: String=Items.tool(session.local_player().equipped_tool).get("resource","")
 			_context=("LMB / Q · Gather "+kind) if kind==selected else ({"wood":"Tree · Select 1 Axe","stone":"Rock · Select 2 Pickaxe","fiber":"Plant · Select 6 Hands"}.get(kind,""))
@@ -234,30 +255,50 @@ func _process(delta: float) -> void:
 	if _map!=null and is_instance_valid(_map): _map.queue_redraw()
 
 func _inventory(content: VBoxContainer) -> void:
+	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50))])
 	content.add_child(label("EQUIPMENT  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),18))
+	content.add_child(label("E / I close inventory · H show / hide hotbar · Food " + str(int(session.local_profile.get("fullness", 50))) + " / 100", 14))
+	var visibility: CheckButton = CheckButton.new()
+	visibility.text = "Show hotbar while playing"
+	visibility.button_pressed = hotbar_enabled
+	visibility.toggled.connect(set_hotbar_visible)
+	content.add_child(visibility)
 	var categories: HBoxContainer=HBoxContainer.new(); content.add_child(categories)
 	var grid: GridContainer=GridContainer.new(); grid.columns=4
 	var info: Label=label("Select a stack to inspect it.",16)
 	var selected_image: TextureRect=TextureRect.new(); selected_image.custom_minimum_size=Vector2(88,88); selected_image.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; selected_image.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var populate: Callable=func(category: String) -> void:
+		inventory_category = category
 		for child: Node in grid.get_children(): grid.remove_child(child); child.queue_free()
 		var inventory: Dictionary=session.local_profile.get("inventory",{})
 		for id: String in inventory:
-			var kind: String="Tools" if id in ["axe","pickaxe","hammer"] else ("Crafting" if id in ["planks","rope"] else "Resources")
+			var kind: String = "Food" if id in ["meat", "cooked_meat", "bone"] else ("Tools" if id in ["axe","pickaxe","hammer"] else ("Crafting" if id in ["planks","rope"] else "Resources"))
 			if category!="All" and kind!=category: continue
 			var remaining: int=int(inventory[id])
 			while remaining>0:
 				var amount: int=mini(remaining,99); remaining-=amount
 				var item: String=id; var count: int=amount
 				var card: Button=button(item.capitalize()+"  ×"+str(count),func() -> void:
-					selected_image.texture=Items.icon(item)
-					info.text=item.capitalize()+" · "+kind+" · Stack "+str(count)+" / 99\n"+("Select a hotbar slot to equip this tool." if kind=="Tools" else "Used for crafting and construction."),grid)
+					inventory_item = item
+					open_page("Inventory"),grid)
 				card.custom_minimum_size=Vector2(175,76); card.icon=Items.icon(item); card.expand_icon=true; card.add_theme_constant_override("icon_max_width",42)
-	for category: String in ["All","Resources","Tools","Crafting"]:
+		if grid.get_child_count() == 0: grid.add_child(label("No items in this category.", 15))
+	for category: String in ["All","Resources","Tools","Crafting","Food"]:
 		button(category,func() -> void: populate.call(category),categories)
 	content.add_child(grid)
-	var detail: HBoxContainer=HBoxContainer.new(); content.add_child(detail); detail.add_child(selected_image); detail.add_child(info); populate.call("All")
-	button("Leave world",func() -> void: leave_requested.emit(),content)
+	var detail: HBoxContainer=HBoxContainer.new(); content.add_child(detail); detail.add_child(selected_image); detail.add_child(info); populate.call(inventory_category)
+	if int(session.local_profile.get("inventory", {}).get(inventory_item, 0)) > 0:
+		selected_image.texture = Items.icon(inventory_item)
+		info.text = inventory_item.capitalize() + " · " + str(session.local_profile.inventory[inventory_item]) + " owned\n" + ("Eat one to restore 40 food." if inventory_item == "cooked_meat" else ("Raw meat · cook with 1 wood at a cooking fire, or feed (T) to a cat or dog to tame it." if inventory_item == "meat" else ("Feed (T) to a cat or dog to tame it." if inventory_item == "bone" else "Remove one to discard it permanently.")))
+		if Items.FOOD_MODELS.has(inventory_item):
+			selected_image.hide()
+			detail.add_child(Items.food_preview(inventory_item))
+		var actions: HBoxContainer = HBoxContainer.new()
+		content.add_child(actions)
+		if inventory_item == "cooked_meat": button("Eat one", func() -> void: session.inventory_action(inventory_item, "eat"), actions)
+		elif inventory_item == "meat": button("Cook at fire", func() -> void: session.craft("cooked_meat"); close_menu(), actions)
+		button("Remove one", func() -> void: session.inventory_action(inventory_item, "discard"), actions)
+	button("Back to game", close_menu, content)
 
 func confirm_removal(id: String) -> void:
 	open_page("Disassemble")
