@@ -102,7 +102,18 @@ func button(text: String, action: Callable, parent: Container) -> Button:
 	node.add_theme_stylebox_override("normal",style(Color("17383c"),9)); node.add_theme_stylebox_override("hover",style(Color("28595a"),9)); node.add_theme_stylebox_override("pressed",style(Color("d5833f"),9)); node.pressed.connect(action); parent.add_child(node); return node
 
 func field(text: String,value: String,parent: Container) -> LineEdit:
-	parent.add_child(label(text,12,Color("adc4b5"))); var edit: LineEdit=LineEdit.new(); edit.text=value; edit.custom_minimum_size.y=34; parent.add_child(edit); return edit
+	parent.add_child(label(text,11,Color("8fa38f")))
+	var edit: LineEdit=LineEdit.new(); edit.text=value; edit.custom_minimum_size.y=38; parent.add_child(edit)
+	edit.add_theme_stylebox_override("normal",style(Color(0.06,0.1,0.09,0.9),10))
+	edit.add_theme_stylebox_override("focus",style(Color(0.08,0.14,0.12,0.95),10))
+	return edit
+
+## Card language shared with the Build catalog: a soft rounded panel used to group
+## related controls (the welcome screen's sections, settings groups, etc.).
+func card(parent: Container) -> VBoxContainer:
+	var panel: PanelContainer=PanelContainer.new(); panel.add_theme_stylebox_override("panel",style(Color(0.09,0.17,0.14,0.85),14)); parent.add_child(panel)
+	var box: VBoxContainer=VBoxContainer.new(); box.add_theme_constant_override("separation",10); panel.add_child(box)
+	return box
 
 func bind_session(value: Node3D) -> void:
 	session=value; open_page("Welcome")
@@ -146,11 +157,13 @@ func open_page(value: String) -> void:
 	if page!="Welcome": button("Continue  [Esc]",close_menu,heading)
 	if page=="Welcome": _welcome(); return
 	if page=="Camp":
-		_body.add_child(label("A home to return to. A world to discover.",15,Color("a9c5b9")))
+		_body.add_child(label("A HOME TO RETURN TO · A WORLD TO DISCOVER",11,Color("d9a441")))
 		var grid: GridContainer=GridContainer.new(); grid.columns=3; grid.add_theme_constant_override("h_separation",10); grid.add_theme_constant_override("v_separation",10); _body.add_child(grid)
 		for destination: String in ["Inventory","Crafting","Build","Map","Achievements","Players","Settings"]:
 			var target: String=destination; var item: Button=button(target,func() -> void: open_page(target),grid); item.custom_minimum_size=Vector2(240,72)
-		button("Leave world",func() -> void: leave_requested.emit(),_body)
+		var leave: VBoxContainer=card(_body)
+		var leave_btn: Button=button("Leave world",func() -> void: leave_requested.emit(),leave)
+		leave_btn.add_theme_stylebox_override("normal",style(Color(0.4,0.16,0.15,0.85),9)); leave_btn.add_theme_stylebox_override("hover",style(Color(0.5,0.2,0.18,0.9),9))
 		return
 	var navigation: HBoxContainer=HBoxContainer.new(); _body.add_child(navigation)
 	for destination: String in ["Inventory","Crafting","Build","Map","Achievements","Players","Settings"]:
@@ -173,64 +186,91 @@ func open_page(value: String) -> void:
 	elif page=="Build":
 		var catalog: VBoxContainer=VBoxContainer.new(); catalog.set_script(preload("res://Adventure/build_catalog.gd")); content.add_child(catalog); catalog.setup(self)
 	elif page=="Achievements":
-		content.add_child(label("YOUR JOURNEY",19,Color("d9c78e")))
+		var stats_card: VBoxContainer=card(content)
+		stats_card.add_child(label("YOUR JOURNEY",11,Color("8fa38f")))
 		var stats: Dictionary=profile.get("stats",{})
 		for id: String in stats:
 			var value_text: String="%d min" % int(float(stats[id])/60) if id=="playtime" else str(snappedf(float(stats[id]),0.1))
-			content.add_child(label(id.replace("_"," ").capitalize()+"     "+value_text,15))
-		content.add_child(label("MILESTONES",19,Color("d9c78e")))
+			stats_card.add_child(label(id.replace("_"," ").capitalize()+"     "+value_text,15))
+		var milestones_card: VBoxContainer=card(content)
+		milestones_card.add_child(label("MILESTONES",11,Color("8fa38f")))
 		for id: String in ["First Steps","Lumberjack","Stoneworker","First Shelter","Homesteader","Builder","Master Builder","Forest Wanderer","Explorer","World Traveler","Architect"]:
-			content.add_child(label(("✓  " if id in profile.get("achievements",[]) else "○  ")+id,17))
+			var earned: bool=id in profile.get("achievements",[])
+			milestones_card.add_child(label(("✓  " if earned else "○  ")+id,17,Color("8bbf4a") if earned else Color("8fa38f")))
 	elif page=="Players":
+		var roster: VBoxContainer=card(content)
+		roster.add_child(label("EXPEDITION",11,Color("8fa38f")))
 		if not session.invite_code.is_empty():
-			button("Copy invite code · " + session.invite_code, func() -> void: DisplayServer.clipboard_set(session.invite_code); show_message("Invite code copied"), content)
-		content.add_child(label("%d / 6 explorers  ·  %s" % [session.players.size(),session.status],18))
-		for id: int in session.players: content.add_child(label(session.players[id].nickname+("  (you)" if id==session.local_id() else ""),19))
+			button("Copy invite code · " + session.invite_code, func() -> void: DisplayServer.clipboard_set(session.invite_code); show_message("Invite code copied"), roster)
+		roster.add_child(label("%d / 6 explorers  ·  %s" % [session.players.size(),session.status],18))
+		for id: int in session.players: roster.add_child(label(session.players[id].nickname+("  (you)" if id==session.local_id() else ""),19))
 	elif page=="Settings":
-		content.add_child(label("Peaceful music (0 = mute)",18))
+		var audio: VBoxContainer=card(content)
+		audio.add_child(label("AUDIO",11,Color("8fa38f")))
+		audio.add_child(label("Peaceful music (0 = mute)",15))
 		var music_slider: HSlider=HSlider.new(); music_slider.min_value=0; music_slider.max_value=1; music_slider.step=.05; music_slider.value=game.music.level
-		music_slider.value_changed.connect(func(v: float) -> void: game.music.set_level(v)); content.add_child(music_slider)
-		content.add_child(label("Mouse sensitivity",18))
-		var slider: HSlider=HSlider.new(); slider.min_value=0.001; slider.max_value=0.006; slider.step=0.0001; slider.value=game.sensitivity; slider.value_changed.connect(func(v: float) -> void: game.sensitivity=v); content.add_child(slider)
-		content.add_child(label("Camera field of view",18))
-		var fov: HSlider=HSlider.new(); fov.min_value=55; fov.max_value=90; fov.value=game.camera.fov; fov.value_changed.connect(func(v: float) -> void: game.camera.fov=v); content.add_child(fov)
-		content.add_child(label("WASD move · Shift sprint · Space jump · E inventory\n1–8 hotbar · LMB/Q use tool · B build · M map\nThe multiplayer world keeps running while menus are open.",15,Color("adc4b5")))
+		music_slider.value_changed.connect(func(v: float) -> void: game.music.set_level(v)); audio.add_child(music_slider)
+
+		var controls_card: VBoxContainer=card(content)
+		controls_card.add_child(label("CONTROLS & CAMERA",11,Color("8fa38f")))
+		controls_card.add_child(label("Mouse sensitivity",15))
+		var slider: HSlider=HSlider.new(); slider.min_value=0.001; slider.max_value=0.006; slider.step=0.0001; slider.value=game.sensitivity; slider.value_changed.connect(func(v: float) -> void: game.sensitivity=v); controls_card.add_child(slider)
+		controls_card.add_child(label("Camera field of view",15))
+		var fov: HSlider=HSlider.new(); fov.min_value=55; fov.max_value=90; fov.value=game.camera.fov; fov.value_changed.connect(func(v: float) -> void: game.camera.fov=v); controls_card.add_child(fov)
+
+		var help: VBoxContainer=card(content)
+		help.add_child(label("WASD move · Shift sprint · Space jump · E inventory\n1–8 hotbar · LMB/Q use tool · B build · M map\nThe multiplayer world keeps running while menus are open.",14,Color("adc4b5")))
 
 func _welcome() -> void:
 	if not session.account_service.account.is_empty() or session.account_service.build_version != "dev" or not OS.has_feature("editor"):
 		_online_welcome(); return
 	_body.add_child(label("Forge a home from the wild. Gather, craft, build, and explore together.",17,Color("b7d0bd")))
-	_body.add_child(label("A survival-building adventure from Amiin Studio",13,Color("d9a66c")))
-	_name=field("EXPLORER NAME","Traveler",_body)
-	var row: HBoxContainer=HBoxContainer.new(); _body.add_child(row)
+	_body.add_child(label("A SURVIVAL-BUILDING ADVENTURE FROM AMIIN STUDIO",11,Color("d9a441")))
+
+	var play: VBoxContainer=card(_body)
+	_name=field("EXPLORER NAME","Traveler",play)
+	var row: HBoxContainer=HBoxContainer.new(); row.add_theme_constant_override("separation",12); play.add_child(row)
 	var a: VBoxContainer=VBoxContainer.new(); a.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(a)
 	var b: VBoxContainer=VBoxContainer.new(); b.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(b)
 	_seed=field("WORLD SEED","73129",a); _port=field("UDP PORT","27840",b)
-	var choices: HBoxContainer=HBoxContainer.new(); _body.add_child(choices)
+	var choices: HBoxContainer=HBoxContainer.new(); choices.add_theme_constant_override("separation",10); play.add_child(choices)
 	button("Play solo",func() -> void: if _valid(): solo_requested.emit(int(_seed.text),_name.text,false),choices).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button("Continue",func() -> void: if _valid(): solo_requested.emit(int(_seed.text),_name.text,true),choices).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button("Host world · 1–6 players",func() -> void: if _valid(): host_requested.emit(int(_seed.text),int(_port.text),_name.text),_body)
-	_address=field("HOST ADDRESS","127.0.0.1",_body)
-	button("Join world",func() -> void: if _valid(): join_requested.emit(_address.text,int(_port.text),_name.text),_body)
-	_body.add_child(label("LAN: host's IP address. Internet: a reachable host and forwarded UDP port.\nWorlds and progress are saved by the host.",12,Color("9fb5ae")))
+	var continue_btn: Button=button("Continue",func() -> void: if _valid(): solo_requested.emit(int(_seed.text),_name.text,true),choices)
+	continue_btn.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	continue_btn.add_theme_stylebox_override("normal",style(Color(0.24,0.5,0.28,0.95),9)); continue_btn.add_theme_stylebox_override("hover",style(Color(0.3,0.6,0.34,0.98),9))
+	continue_btn.add_theme_color_override("font_color",Color("173c26")); continue_btn.add_theme_color_override("font_color_hover",Color("173c26"))
+
+	var online: VBoxContainer=card(_body)
+	online.add_child(label("MULTIPLAYER",11,Color("8fa38f")))
+	button("Host world · 1–6 players",func() -> void: if _valid(): host_requested.emit(int(_seed.text),int(_port.text),_name.text),online)
+	_address=field("HOST ADDRESS","127.0.0.1",online)
+	button("Join world",func() -> void: if _valid(): join_requested.emit(_address.text,int(_port.text),_name.text),online)
+	online.add_child(label("LAN: host's IP address. Internet: a reachable host and forwarded UDP port.\nWorlds and progress are saved by the host.",12,Color("9fb5ae")))
 
 func _online_welcome() -> void:
 	var service: Node = session.account_service
-	_body.add_child(label("AMIIN STUDIO  ·  ONLINE ADVENTURES", 16, Color("d9a66c")))
+	_body.add_child(label("AMIIN STUDIO  ·  ONLINE ADVENTURES", 11, Color("d9a441")))
 	if service.account.is_empty():
-		_body.add_child(label(service.error, 18))
-		_body.add_child(label("Create an account or sign in using Amiin Launcher, then press Play.", 16))
+		var locked: VBoxContainer=card(_body)
+		locked.add_child(label(service.error, 18))
+		locked.add_child(label("Create an account or sign in using Amiin Launcher, then press Play.", 16))
 		return
 	_body.add_child(label("Welcome, " + str(service.account.username) + "  ·  " + service.channel.capitalize(), 20))
-	_seed = field("WORLD SEED", "73129", _body)
-	button("Continue / play solo", func() -> void:
-		if _seed.text.is_valid_int(): solo_requested.emit(int(_seed.text), str(service.account.username), true), _body)
+	var play: VBoxContainer=card(_body)
+	_seed = field("WORLD SEED", "73129", play)
+	var continue_btn: Button=button("Continue / play solo", func() -> void:
+		if _seed.text.is_valid_int(): solo_requested.emit(int(_seed.text), str(service.account.username), true), play)
+	continue_btn.add_theme_stylebox_override("normal",style(Color(0.24,0.5,0.28,0.95),9)); continue_btn.add_theme_stylebox_override("hover",style(Color(0.3,0.6,0.34,0.98),9))
+	continue_btn.add_theme_color_override("font_color",Color("173c26")); continue_btn.add_theme_color_override("font_color_hover",Color("173c26"))
+
+	var online: VBoxContainer=card(_body)
+	online.add_child(label("MULTIPLAYER",11,Color("8fa38f")))
 	button("Host online world · 1–6 players", func() -> void:
-		if _seed.text.is_valid_int(): session.host_online(int(_seed.text)), _body)
-	_address = field("FRIEND'S INVITE CODE", "", _body)
+		if _seed.text.is_valid_int(): session.host_online(int(_seed.text)), online)
+	_address = field("FRIEND'S INVITE CODE", "", online)
 	_address.max_length = 8; _address.placeholder_text = "Example: AB3D7FGH"
-	button("Join friend", func() -> void: session.join_online(_address.text), _body)
-	_body.add_child(label("Share your code from Esc → Players. No router setup needed.\nThe host keeps the world save and must remain in the game.", 14, Color("9fb5ae")))
+	button("Join friend", func() -> void: session.join_online(_address.text), online)
+	online.add_child(label("Share your code from Esc → Players. No router setup needed.\nThe host keeps the world save and must remain in the game.", 14, Color("9fb5ae")))
 
 func _valid() -> bool:
 	if not _seed.text.is_valid_int() or not _port.text.is_valid_int() or int(_port.text)<1024 or int(_port.text)>65535:
@@ -279,19 +319,24 @@ func _process(delta: float) -> void:
 
 func _inventory(content: VBoxContainer) -> void:
 	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))])
-	content.add_child(label("EQUIPMENT  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),18))
-	content.add_child(label("E / I close inventory · H show / hide hotbar · Health " + str(int(session.local_profile.get("health", 100))) + " / 100 · Food " + str(int(session.local_profile.get("fullness", 50))) + " / 100", 14))
+	var equipment: VBoxContainer=card(content)
+	equipment.add_child(label("EQUIPPED  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),14,Color("8fa38f")))
+	equipment.add_child(label("E / I close inventory · H show / hide hotbar",12,Color("8fa38f")))
 	var visibility: CheckButton = CheckButton.new()
 	visibility.text = "Show hotbar while playing"
 	visibility.button_pressed = hotbar_enabled
 	visibility.toggled.connect(set_hotbar_visible)
-	content.add_child(visibility)
-	var categories: HBoxContainer=HBoxContainer.new(); content.add_child(categories)
-	var grid: GridContainer=GridContainer.new(); grid.columns=4
-	var info: Label=label("Select a stack to inspect it.",16)
+	equipment.add_child(visibility)
+
+	var categories: HBoxContainer=HBoxContainer.new(); categories.add_theme_constant_override("separation",8); content.add_child(categories)
+	var grid: GridContainer=GridContainer.new(); grid.columns=3; grid.add_theme_constant_override("h_separation",12); grid.add_theme_constant_override("v_separation",12); content.add_child(grid)
+	var info: Label=label("Select a stack to inspect it.",14,Color("adc4b5"))
 	var selected_image: TextureRect=TextureRect.new(); selected_image.custom_minimum_size=Vector2(88,88); selected_image.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; selected_image.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var populate: Callable=func(category: String) -> void:
 		inventory_category = category
+		for i in range(categories.get_child_count()):
+			var chip: Button=categories.get_child(i)
+			chip.add_theme_stylebox_override("normal",style(Color(0.24,0.5,0.28,0.95) if chip.text==category else Color(0.06,0.1,0.09,0.9),9))
 		for child: Node in grid.get_children(): grid.remove_child(child); child.queue_free()
 		var inventory: Dictionary=session.local_profile.get("inventory",{})
 		for id: String in inventory:
@@ -301,23 +346,29 @@ func _inventory(content: VBoxContainer) -> void:
 			while remaining>0:
 				var amount: int=mini(remaining,99); remaining-=amount
 				var item: String=id; var count: int=amount
-				var card: Button=button(item.capitalize()+"  ×"+str(count),func() -> void:
-					inventory_item = item
-					open_page("Inventory"),grid)
-				card.custom_minimum_size=Vector2(175,76); card.icon=Items.icon(item); card.expand_icon=true; card.add_theme_constant_override("icon_max_width",42)
+				var panel: PanelContainer=PanelContainer.new(); panel.custom_minimum_size=Vector2(0,150)
+				panel.add_theme_stylebox_override("panel",style(Color(0.09,0.17,0.14,0.92) if item==inventory_item else Color(0.07,0.13,0.11,0.85),11)); grid.add_child(panel)
+				var box: VBoxContainer=VBoxContainer.new(); box.add_theme_constant_override("separation",6); panel.add_child(box)
+				var tile: PanelContainer=PanelContainer.new(); tile.custom_minimum_size=Vector2(0,68)
+				tile.add_theme_stylebox_override("panel",style(Color(0.13,0.24,0.16,0.9),8)); box.add_child(tile)
+				var icon: TextureRect=TextureRect.new(); icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(0,68); icon.texture=Items.icon(item); tile.add_child(icon)
+				var select: Button=Button.new(); select.text=item.capitalize()+"  ×"+str(count); select.focus_mode=Control.FOCUS_NONE; select.custom_minimum_size.y=34
+				select.pressed.connect(func() -> void: inventory_item = item; open_page("Inventory")); box.add_child(select)
 		if grid.get_child_count() == 0: grid.add_child(label("No items in this category.", 15))
 	for category: String in ["All","Resources","Tools","Crafting","Food"]:
 		button(category,func() -> void: populate.call(category),categories)
-	content.add_child(grid)
-	var detail: HBoxContainer=HBoxContainer.new(); content.add_child(detail); detail.add_child(selected_image); detail.add_child(info); populate.call(inventory_category)
+	populate.call(inventory_category)
 	if int(session.local_profile.get("inventory", {}).get(inventory_item, 0)) > 0:
+		var detail: VBoxContainer=card(content)
+		var detail_row: HBoxContainer=HBoxContainer.new(); detail_row.add_theme_constant_override("separation",12); detail.add_child(detail_row)
+		detail_row.add_child(selected_image); detail_row.add_child(info)
 		selected_image.texture = Items.icon(inventory_item)
 		info.text = inventory_item.capitalize() + " · " + str(session.local_profile.inventory[inventory_item]) + " owned\n" + ("Eat one to restore 40 food." if inventory_item == "cooked_meat" else ("Raw meat · cook with 1 wood at a cooking fire, or feed (T) to a cat or dog to tame it." if inventory_item == "meat" else ("Feed (T) to a cat or dog to tame it." if inventory_item == "bone" else "Remove one to discard it permanently.")))
 		if Items.FOOD_MODELS.has(inventory_item):
 			selected_image.hide()
-			detail.add_child(Items.food_preview(inventory_item))
-		var actions: HBoxContainer = HBoxContainer.new()
-		content.add_child(actions)
+			detail_row.add_child(Items.food_preview(inventory_item))
+		var actions: HBoxContainer = HBoxContainer.new(); actions.add_theme_constant_override("separation",8)
+		detail.add_child(actions)
 		if inventory_item == "cooked_meat": button("Eat one", func() -> void: session.inventory_action(inventory_item, "eat"), actions)
 		elif inventory_item == "meat": button("Cook at fire", func() -> void: session.craft("cooked_meat"); close_menu(), actions)
 		if inventory_item in ["axe", "pickaxe", "hammer"]:

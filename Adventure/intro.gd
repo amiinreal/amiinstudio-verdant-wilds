@@ -8,8 +8,16 @@ var completed: bool=false
 func _ready() -> void:
 	layer=90
 	root=Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(root)
-	var backdrop: ColorRect=ColorRect.new(); backdrop.color=Color("071216"); backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.add_child(backdrop)
-	var glow: ColorRect=ColorRect.new(); glow.color=Color(0.95,0.10,0.02,0.06); glow.set_anchors_and_offsets_preset(Control.PRESET_CENTER); glow.position=Vector2(-360,-220); glow.size=Vector2(720,440); root.add_child(glow)
+	var backdrop: TextureRect=TextureRect.new(); backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); backdrop.stretch_mode=TextureRect.STRETCH_SCALE; root.add_child(backdrop)
+	var backdrop_grad: Gradient=Gradient.new(); backdrop_grad.set_color(0,Color("14351f")); backdrop_grad.set_color(1,Color("050f0a"))
+	var backdrop_tex: GradientTexture2D=GradientTexture2D.new(); backdrop_tex.gradient=backdrop_grad; backdrop_tex.fill=GradientTexture2D.FILL_RADIAL
+	backdrop_tex.fill_from=Vector2(0.5,0.32); backdrop_tex.fill_to=Vector2(0.5,1.05); backdrop_tex.width=512; backdrop_tex.height=512
+	backdrop.texture=backdrop_tex
+	var glow: TextureRect=TextureRect.new(); glow.set_anchors_and_offsets_preset(Control.PRESET_CENTER); glow.position=Vector2(-420,-320); glow.size=Vector2(840,560); glow.stretch_mode=TextureRect.STRETCH_SCALE; root.add_child(glow)
+	var glow_grad: Gradient=Gradient.new(); glow_grad.set_color(0,Color(0.85,0.64,0.29,0.16)); glow_grad.set_color(1,Color(0.85,0.64,0.29,0.0))
+	var glow_tex: GradientTexture2D=GradientTexture2D.new(); glow_tex.gradient=glow_grad; glow_tex.fill=GradientTexture2D.FILL_RADIAL
+	glow_tex.fill_from=Vector2(0.5,0.5); glow_tex.fill_to=Vector2(0.5,1.0); glow_tex.width=512; glow_tex.height=512
+	glow.texture=glow_tex
 
 	var outer: PanelContainer=PanelContainer.new(); outer.add_theme_stylebox_override("panel",Branding.card_style(40))
 	outer.set_anchors_and_offsets_preset(Control.PRESET_CENTER); outer.position=Vector2(-260,-220); outer.size=Vector2(520,440)
