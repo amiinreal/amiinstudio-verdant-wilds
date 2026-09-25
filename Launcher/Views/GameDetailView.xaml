@@ -53,7 +53,8 @@
                                  "Play") and PlayCommand. A separate, unwired download icon
                                  here was pure clutter that made it look like there were two
                                  competing actions when only one (Play) actually did anything. -->
-                            <Button Content="{Binding Game.PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding PlayCommand}"/>
+                            <Button Content="{Binding Game.PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding PlayCommand}"
+                                    IsEnabled="{Binding Game.IsRunning, Converter={StaticResource BoolInverse}}"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

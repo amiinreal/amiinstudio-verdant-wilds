@@ -86,6 +86,7 @@ public class NavigationService : ObservableObject
     public async Task PlayOrInstallAsync(GameModel game)
     {
         if (_state.Config is null || _state.Token.Length == 0) throw new Exception("Sign in before downloading or playing.");
+        if (game.IsRunning) return; // Play is disabled while running, but guard anyway.
         var channel = _state.Channel; Updates.SafeName(channel);
 
         // Everything from here on used to run partly outside the try/catch below, so a
@@ -174,6 +175,12 @@ public class NavigationService : ObservableObject
             if (started is null || started.HasExited)
                 throw new Exception("The game closed immediately after starting. This can happen if antivirus blocked it, " +
                     "or if the downloaded files are corrupted -- try Play again, or reinstall from Downloads.");
+
+            // Play stays disabled ("Running") until the game process actually exits.
+            game.IsRunning = true;
+            started.EnableRaisingEvents = true;
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            started.Exited += (_, _) => dispatcher?.BeginInvoke(() => game.IsRunning = false);
         }
         catch (OperationCanceledException)
         {

@@ -119,7 +119,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="{Binding PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}"
                                         Command="{Binding DataContext.PlayGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"/>
+                                        CommandParameter="{Binding}"
+                                        IsEnabled="{Binding IsRunning, Converter={StaticResource BoolInverse}}"/>
                                 <Button Content="View Game" Style="{StaticResource GhostButtonStyle}" Margin="10,0,0,0"
                                         Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}"/>

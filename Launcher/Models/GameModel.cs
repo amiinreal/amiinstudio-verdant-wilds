@@ -17,6 +17,7 @@ public partial class GameModel : ObservableObject
     [ObservableProperty] private double playtimeHours;
     [ObservableProperty] private string lastPlayed = "Never";
     [ObservableProperty] private string version;
+    [ObservableProperty] private bool isRunning;
 
     public GameModel(GameEntry entry, GameStatus status, string? installedVersion)
     {
@@ -25,7 +26,22 @@ public partial class GameModel : ObservableObject
         version = installedVersion ?? entry.package.version;
     }
 
-    public string StatusText => Status switch
+    // [ObservableProperty] only raises PropertyChanged for Status itself; StatusText and
+    // PlayButtonLabel are derived from it, so without these they never updated the UI when
+    // Status changed in place (only worked after a full library reload rebuilt the GameModel).
+    partial void OnStatusChanged(GameStatus value)
+    {
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(PlayButtonLabel));
+    }
+
+    partial void OnIsRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(PlayButtonLabel));
+    }
+
+    public string StatusText => IsRunning ? "Running" : Status switch
     {
         GameStatus.Ready => "Ready to play",
         GameStatus.UpdateAvailable => "Update available",
@@ -33,7 +49,7 @@ public partial class GameModel : ObservableObject
         _ => ""
     };
 
-    public string PlayButtonLabel => Status switch
+    public string PlayButtonLabel => IsRunning ? "Running" : Status switch
     {
         GameStatus.Ready => "Play",
         GameStatus.UpdateAvailable => "Update & Play",

@@ -21,8 +21,12 @@ static func refresh_catalog() -> void:
 	_definitions.clear()
 	_catalog.clear()
 	for file: String in DirAccess.get_files_at("res://Adventure/data/buildings"):
-		if not file.ends_with(".tres"): continue
-		var data: Resource=load("res://Adventure/data/buildings/"+file)
+		# An exported build's .pck stores a converted resource as "name.tres.remap" (the
+		# actual binary data lives elsewhere; the .remap file is what a directory listing
+		# sees), so matching only ".tres" always found nothing outside the editor and the
+		# catalog silently came back empty ("No matching pieces.") in every shipped build.
+		if not (file.ends_with(".tres") or file.ends_with(".tres.remap")): continue
+		var data: Resource=load("res://Adventure/data/buildings/"+file.trim_suffix(".remap"))
 		_definitions[data.id]={"id":data.id,"label":data.display_name,"asset":data.scene.resource_path,"kind":data.snap_type,"footprint":data.footprint,"cost":data.resource_cost,"offset":data.offset,"data":data}
 	for id: String in _definitions:
 		if id not in ["roof_small","roof_square","roof_long","roof_corner"]: _catalog[id]=_definitions[id]

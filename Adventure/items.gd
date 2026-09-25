@@ -7,11 +7,38 @@ const TOOLS: Dictionary={
 	"hammer":{"name":"Building hammer","resource":"building","model":"res://Adventure/generated/BuildingHammer.glb","grip":Vector3.ZERO,"rotation":Vector3(PI,0,0)}
 }
 static var RECIPES: Dictionary={}
+const FOOD_MODELS: Dictionary = {
+	"meat":preload("res://Adventure/cooking/raw_meat.glb"),
+	"cooked_meat":preload("res://Adventure/cooking/cooked_meat.glb")
+}
+
+static func food_preview(id: String) -> SubViewportContainer:
+	var container: SubViewportContainer = SubViewportContainer.new()
+	container.custom_minimum_size = Vector2(120, 88)
+	container.stretch = true
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var viewport: SubViewport = SubViewport.new()
+	viewport.size = Vector2i(120, 88)
+	viewport.own_world_3d = true
+	viewport.transparent_bg = true
+	container.add_child(viewport)
+	viewport.add_child(FOOD_MODELS[id].instantiate())
+	var light: DirectionalLight3D = DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-50, -30, 0)
+	viewport.add_child(light)
+	var camera: Camera3D = Camera3D.new()
+	camera.position = Vector3(0.4, 0.6, 0.6)
+	viewport.add_child(camera)
+	camera.transform = camera.transform.looking_at(Vector3(0, 0.04, 0), Vector3.UP)
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 0.65
+	return container
 static func recipes() -> Dictionary:
 	if not RECIPES.is_empty(): return RECIPES
 	for file: String in DirAccess.get_files_at("res://Adventure/data/recipes"):
-		if not file.ends_with(".tres"): continue
-		var data: Resource=load("res://Adventure/data/recipes/"+file)
+		# Exported builds store a converted resource as "name.tres.remap"; see modules.gd.
+		if not (file.ends_with(".tres") or file.ends_with(".tres.remap")): continue
+		var data: Resource=load("res://Adventure/data/recipes/"+file.trim_suffix(".remap"))
 		RECIPES[data.recipe_id]={"cost":data.ingredients,"amount":data.quantity,"data":data}
 	return RECIPES
 static func tool(id: String) -> Dictionary: return TOOLS.get(id,{})
@@ -27,6 +54,7 @@ static func model(id: String) -> Node3D:
 static var _icons: Dictionary={}
 static func icon(id: String) -> Texture2D:
 	if not _icons.has(id):
-		var path: String="res://Adventure/generated/items/"+id+".png"
+		var path: String="res://Adventure/animals/meat.svg" if id == "meat" else "res://Adventure/generated/items/"+id+".png"
+		if id == "cooked_meat": path = "res://Adventure/cooking/cooked_meat.svg"
 		_icons[id]=load(path) if ResourceLoader.exists(path) else null
 	return _icons[id]
