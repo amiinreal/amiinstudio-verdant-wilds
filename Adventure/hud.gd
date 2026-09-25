@@ -36,6 +36,7 @@ var _map: Control
 var _scrim: ColorRect
 var hotbar_enabled: bool = true
 var _food_bar: ProgressBar
+var _health_bar: ProgressBar
 var inventory_category: String = "All"
 var inventory_item: String = ""
 var _inventory_hash: int = 0
@@ -62,6 +63,13 @@ func _ready() -> void:
 		button.icon=Items.icon(HOTBAR[i]); button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",46); button.tooltip_text=HOTBAR[i].capitalize()
 		var number: Label=label(str(i+1),11,Color("e6dcc3")); number.position=Vector2(6,2); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(number); _slot_numbers.append(number)
 		var count: Label=label("",11); count.position=Vector2(38,49); count.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(count); _slot_counts.append(count)
+	var health_row: HBoxContainer = HBoxContainer.new(); health_row.add_theme_constant_override("separation", 8); _root.add_child(health_row)
+	health_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); health_row.offset_left=-274; health_row.offset_right=274; health_row.offset_top=-128; health_row.offset_bottom=-110
+	health_row.add_child(label("HEALTH", 11, Color("e0a9a4")))
+	_health_bar = ProgressBar.new(); _health_bar.custom_minimum_size = Vector2(180, 12); _health_bar.show_percentage = false; _health_bar.min_value = 0; _health_bar.max_value = 100
+	_health_bar.add_theme_stylebox_override("background", style(Color(0.03, 0.06, 0.06, 0.9), 4))
+	_health_bar.add_theme_stylebox_override("fill", style(Color(0.82, 0.28, 0.3, 0.95), 4))
+	health_row.add_child(_health_bar)
 	var food_row: HBoxContainer = HBoxContainer.new(); food_row.add_theme_constant_override("separation", 8); _root.add_child(food_row)
 	food_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); food_row.offset_left=-274; food_row.offset_right=274; food_row.offset_top=-108; food_row.offset_bottom=-90
 	food_row.add_child(label("FOOD", 11, Color("d9c9a0")))
@@ -237,9 +245,12 @@ func _process(delta: float) -> void:
 		_food_bar.get_parent().visible = not menu_open and hotbar_enabled
 		_food_bar.value = float(session.local_profile.get("fullness", 50))
 		_food_bar.get_theme_stylebox("fill").bg_color = Color(0.78, 0.3, 0.28, 0.95) if _food_bar.value < 25 else Color(0.62, 0.78, 0.34, 0.95)
+	if _health_bar:
+		_health_bar.get_parent().visible = not menu_open and hotbar_enabled
+		_health_bar.value = float(session.local_profile.get("health", 100))
 	_controls.visible=not menu_open
 	var inv: Dictionary=session.local_profile.get("inventory",{})
-	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50)), str(session.local_profile.get("equipped", "hand"))]):
+	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))]):
 		open_page("Inventory")
 	var names: Array[String]=["Axe","Pickaxe","Hammer","Wood","Stone","Fiber","Planks","Rope"]
 	for i in range(8):
@@ -267,9 +278,9 @@ func _process(delta: float) -> void:
 	if _map!=null and is_instance_valid(_map): _map.queue_redraw()
 
 func _inventory(content: VBoxContainer) -> void:
-	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), str(session.local_profile.get("equipped", "hand"))])
+	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))])
 	content.add_child(label("EQUIPMENT  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),18))
-	content.add_child(label("E / I close inventory · H show / hide hotbar · Food " + str(int(session.local_profile.get("fullness", 50))) + " / 100", 14))
+	content.add_child(label("E / I close inventory · H show / hide hotbar · Health " + str(int(session.local_profile.get("health", 100))) + " / 100 · Food " + str(int(session.local_profile.get("fullness", 50))) + " / 100", 14))
 	var visibility: CheckButton = CheckButton.new()
 	visibility.text = "Show hotbar while playing"
 	visibility.button_pressed = hotbar_enabled

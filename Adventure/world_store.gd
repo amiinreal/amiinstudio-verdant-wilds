@@ -130,6 +130,9 @@ func tick(peer: int, actor: Vector3, distance: float, delta: float, world: Node3
 	var p: Dictionary=profile(peer)
 	if p.is_empty(): return
 	p["fullness"] = maxf(0.0, float(p.get("fullness", 50)) - delta / 30.0)
+	# Starving (Minecraft-style): once food hits zero, health drains too -- about 90
+	# seconds from full health to zero if fullness never recovers.
+	if p["fullness"] <= 0.0: p["health"] = maxf(0.0, float(p.get("health", 100)) - delta * (100.0 / 90.0))
 	p["stats"]["playtime"]+=delta
 	p["stats"]["distance"]+=clampf(distance,0,20*delta)
 	var pos: Vector2=Vector2(actor.x,actor.z)
@@ -258,6 +261,8 @@ static func valid_save(value: Variant, seed_value: int) -> bool:
 		if not p is Dictionary: return false
 		var fullness: Variant = p.get("fullness", 50)
 		if not (fullness is int or fullness is float) or not is_finite(float(fullness)) or float(fullness) < 0 or float(fullness) > 100: return false
+		var health: Variant = p.get("health", 100)
+		if not (health is int or health is float) or not is_finite(float(health)) or float(health) < 0 or float(health) > 100: return false
 		for key: String in ["inventory","stats","houses"]:
 			if not p.get(key) is Dictionary: return false
 		for key: String in ["regions","landmarks","hidden","bridges","discovered_structures","achievements"]:
@@ -274,6 +279,7 @@ static func valid_save(value: Variant, seed_value: int) -> bool:
 func _normalize_profiles() -> void:
 	for p: Dictionary in data["profiles"].values():
 		if not p.has("fullness"): p["fullness"] = 50
+		if not p.has("health"): p["health"] = 100
 		for tool: String in ["axe","pickaxe","hammer"]:
 			if not p["inventory"].has(tool): p["inventory"][tool]=1
 		if not p.has("equipped"): p["equipped"]="axe"
@@ -316,18 +322,39 @@ func interact_animal(peer: int, animal: Node3D) -> Dictionary:
 	data.tamed[animal.animal_id] = p.id
 	return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true, "affection":true}
 
+## PvP: same tool damage as animals. Defeat resets the target's health and fullness (a
+## respawn, not a loot drop) -- the caller is responsible for teleporting them back.
+func hit_player(attacker: int, target: int, now: float) -> Dictionary:
+	var attacker_profile: Dictionary = profile(attacker)
+	var target_profile: Dictionary = profile(target)
+	if attacker_profile.is_empty() or target_profile.is_empty(): return Build.fail("Player not found.")
+	if now < float(cooldowns.get(attacker, 0)): return Build.fail("Wait for your next swing.")
+	var hp: int = int(target_profile.get("health", 100))
+	if hp <= 0: return Build.fail("They are already down.")
+	var tool_id: String = attacker_profile.get("equipped", "hand")
+	if tool_id != "hand" and int(attacker_profile.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
+	hp = maxi(0, hp - (30 if tool_id in ["axe", "pickaxe"] else 15))
+	target_profile["health"] = hp
+	cooldowns[attacker] = now + 0.5
+	if hp == 0:
+		target_profile["health"] = 100
+		target_profile["fullness"] = maxf(float(target_profile.get("fullness", 50)), 30.0)
+		return {"ok":true, "reason":"Knocked out! They respawn at their last checkpoint.", "defeated":true}
+	return {"ok":true, "reason":"Hit · " + str(hp) + " health"}
+
 func inventory_action(peer: int, item: String, action: String, now: float) -> Dictionary:
 	var p: Dictionary = profile(peer)
 	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait a moment.")
 	if action not in ["eat", "discard"] or int(p.inventory.get(item, 0)) < 1: return Build.fail("You do not have that item.")
 	if action == "eat":
 		if item != "cooked_meat": return Build.fail("Cook raw meat at a cooking fire first." if item == "meat" else "This item is not food.")
-		if int(p.get("fullness", 50)) >= 100: return Build.fail("You are already full.")
+		if int(p.get("fullness", 50)) >= 100 and int(p.get("health", 100)) >= 100: return Build.fail("You are already full and healthy.")
 		p.fullness = mini(100, int(p.get("fullness", 50)) + 40)
+		p.health = mini(100, int(p.get("health", 100)) + 20)
 	p.inventory[item] = int(p.inventory[item]) - 1
 	if p.inventory[item] == 0 and p.get("equipped", "hand") == item: p.equipped = "hand"
 	cooldowns[peer] = now + 0.3
-	return {"ok":true, "reason":("Ate grilled meat · +40 food" if action == "eat" else "Removed one " + item + " from inventory.")}
+	return {"ok":true, "reason":("Ate grilled meat · +40 food, +20 health" if action == "eat" else "Removed one " + item + " from inventory.")}
 
 func equip(peer: int,tool: String) -> Dictionary:
 	var p: Dictionary=profile(peer)

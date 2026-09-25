@@ -410,6 +410,11 @@ func _physics_process(delta: float) -> void:
 			store.tick(id,body.position,body.position.distance_to(before),delta,world)
 			if body.position.y < -2.5:
 				_respawn(id)
+			elif float(store.profile(id).get("health", 100)) <= 0.0:
+				store.profile(id).health = 100
+				store.profile(id).fullness = maxf(float(store.profile(id).get("fullness", 50)), 30.0)
+				_respawn(id); _publish_profile(id)
+				_private_message(id, "You starved and respawned at your last checkpoint.")
 		_profile_timer+=delta; _save_timer+=delta
 		if _profile_timer>=2:
 			_profile_timer=0
@@ -560,11 +565,32 @@ func nearest_resource(id: int, matching_tool: bool=true) -> String:
 		if d<distance: nearest=key; distance=d
 	return nearest
 
+## Other players in reach and roughly faced, like nearest_animal but for CharacterBody3D peers.
+func nearest_player(id: int) -> int:
+	if not running or not players.has(id): return 0
+	var body: CharacterBody3D = players[id]
+	var result: int = 0
+	var distance: float = 3.0
+	for other: int in players:
+		if other == id or int(store.profile(other).get("health", 100)) <= 0: continue
+		var d: float = body.position.distance_to(players[other].position)
+		if d >= distance: continue
+		var direction: Vector3 = players[other].position - body.position
+		direction.y = 0.0
+		if direction.length() > 0.5 and (Basis(Vector3.UP, body.facing) * Vector3.FORWARD).dot(direction.normalized()) < 0.35: continue
+		result = other; distance = d
+	return result
+
 func gather() -> void:
 	var animal: Node3D = nearest_animal(local_id())
 	if animal != null:
 		if is_authority(): _attack_animal(1, animal.animal_id)
 		else: _attack_animal_request.rpc_id(1, animal.animal_id)
+		return
+	var target_player: int = nearest_player(local_id())
+	if target_player != 0:
+		if is_authority(): _attack_player(1, target_player)
+		else: _attack_player_request.rpc_id(1, target_player)
 		return
 	var id: String=nearest_resource(local_id())
 	if id.is_empty():
@@ -688,6 +714,15 @@ func _tick_actions() -> void:
 			var animal: Node3D = world.wildlife.find_animal(job.animal)
 			if not _animal_in_reach(id, animal): continue
 			_economy_result(id, store.hit_animal(id, animal, clock_time))
+		elif job.type=="attack_player":
+			if store.profile(id).get("equipped", "hand") != job.tool or nearest_player(id) != job.target: continue
+			var result: Dictionary = store.hit_player(id, job.target, clock_time)
+			_private_message(id, result["reason"])
+			if result.ok:
+				_publish_profile(job.target); _send_state(); _save()
+				if result.get("defeated", false):
+					_respawn(job.target)
+					_private_message(job.target, "You were knocked out and respawned at your last checkpoint.")
 		else:
 			var data: Resource=preload("res://Adventure/items.gd").recipes()[job.recipe].data
 			if not _station_available(id,data.required_station): _private_message(id,"Craft cancelled: station out of reach."); continue
@@ -730,6 +765,18 @@ func _attack_animal(id: int, animal_id: String) -> void:
 	var tool: String = store.profile(id).get("equipped", "hand")
 	_actions[id] = {"type":"attack", "animal":animal_id, "origin":players[id].position, "due":clock_time + 0.4, "tool":tool}
 	_start_action(id, "AxeSwing" if tool == "axe" else ("PickaxeSwing" if tool == "pickaxe" else "HammerBuild"), animal.position, 0.8)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _attack_player_request(target_id: int) -> void:
+	if is_authority(): _attack_player(multiplayer.get_remote_sender_id(), target_id)
+
+func _attack_player(id: int, target_id: int) -> void:
+	if not running or not players.has(id) or _actions.has(id) or players[id].swimming: return
+	if not players.has(target_id) or clock_time < float(store.cooldowns.get(id, 0)): return
+	if nearest_player(id) != target_id: return
+	var tool: String = store.profile(id).get("equipped", "hand")
+	_actions[id] = {"type":"attack_player", "target":target_id, "origin":players[id].position, "due":clock_time + 0.4, "tool":tool}
+	_start_action(id, "AxeSwing" if tool == "axe" else ("PickaxeSwing" if tool == "pickaxe" else "HammerBuild"), players[target_id].position, 0.8)
 
 ## Pet a nearby animal (free), or feed it a bone/meat to tame a cat or dog for life.
 func pet_animal() -> void:
