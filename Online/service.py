@@ -201,7 +201,11 @@ def me(request: Request):
 @app.post("/auth/launch-ticket")
 def launch_ticket(request: Request):
     user = identity(request, ("launcher",))
-    return {"ticket": new_session(user["id"], "launch", 90)}
+    # A large Godot Mono game can take well over a minute to boot on first run (JIT,
+    # shader compilation, asset loading), so a short-lived ticket expired before the
+    # game ever got to redeem it via /auth/exchange -- surfacing as "Start the game
+    # from the launcher again" even on a completely successful launch.
+    return {"ticket": new_session(user["id"], "launch", 600)}
 
 
 @app.post("/auth/exchange")

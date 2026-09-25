@@ -162,9 +162,17 @@ public class NavigationService : ObservableObject
             start.Environment["AMIIN_CHANNEL"] = channel;
             start.Environment["AMIIN_GAME_ID"] = entry.id;
             start.Environment["AMIIN_LAUNCH_TICKET"] = ticket.GetProperty("ticket").GetString();
-            var pack = Path.Combine(start.WorkingDirectory, Path.GetFileNameWithoutExtension(entry.package.entry) + ".pck");
-            if (File.Exists(pack)) { start.ArgumentList.Add("--main-pack"); start.ArgumentList.Add(pack); }
-            SafeStart(start);
+            // No --main-pack here: this Godot export is compiled with disable_path_overrides,
+            // which makes it abort immediately (exit code 1, "this Godot binary was compiled
+            // without support for path overrides") the instant that flag is present -- so the
+            // game could never actually launch through the launcher, silently, since nothing
+            // here checked whether the started process stayed alive. It's also unnecessary:
+            // Godot auto-loads a same-named .pck sitting next to the executable on its own.
+            var started = SafeStart(start);
+            await Task.Delay(1500, cancellation.Token);
+            if (started is null || started.HasExited)
+                throw new Exception("The game closed immediately after starting. This can happen if antivirus blocked it, " +
+                    "or if the downloaded files are corrupted -- try Play again, or reinstall from Downloads.");
         }
         catch (OperationCanceledException)
         {
