@@ -6,7 +6,11 @@ signal leave_requested
 signal build_requested(index: int)
 const Items = preload("res://Adventure/items.gd")
 const Branding = preload("res://Adventure/branding.gd")
-const HOTBAR: Array[String]=["axe","pickaxe","hammer","wood","stone","fiber","planks","rope"]
+const DEFAULT_HOTBAR: Array[String]=["axe","pickaxe","hammer","wood","stone","fiber","planks","rope"]
+const TOOL_IDS: Array[String]=["axe","pickaxe","hammer","hand"]
+## Which item sits in each of the 8 hotbar slots (never bigger than 8; "" is empty). Pinned
+## and unpinned from the Inventory page, persisted alongside the hotbar-visibility preference.
+var hotbar_slots: Array[String]=DEFAULT_HOTBAR.duplicate()
 var _controls: PanelContainer
 var _slot_numbers: Array[Label]=[]
 var _slot_counts: Array[Label]=[]
@@ -43,7 +47,12 @@ var _inventory_hash: int = 0
 
 func _ready() -> void:
 	var preferences: ConfigFile = ConfigFile.new()
-	if preferences.load("user://inventory_ui.cfg") == OK: hotbar_enabled = bool(preferences.get_value("ui", "hotbar", true))
+	if preferences.load("user://inventory_ui.cfg") == OK:
+		hotbar_enabled = bool(preferences.get_value("ui", "hotbar", true))
+		var saved_slots: PackedStringArray = preferences.get_value("ui", "hotbar_slots", PackedStringArray())
+		if saved_slots.size() == 8:
+			hotbar_slots.clear()
+			for slot: String in saved_slots: hotbar_slots.append(slot)
 	_root=Control.new(); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(_root)
 	_scrim=ColorRect.new(); _scrim.color=Color(0.02,0.045,0.045,0.6); _scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _scrim.mouse_filter=Control.MOUSE_FILTER_IGNORE; _scrim.hide(); _root.add_child(_scrim)
 	_panel=PanelContainer.new(); _panel.add_theme_stylebox_override("panel",style(Color(0.035,0.095,0.11,0.95),26)); _root.add_child(_panel)
@@ -58,11 +67,11 @@ func _ready() -> void:
 		button.add_theme_stylebox_override("normal",style(Color(0.018,0.05,0.06,0.94),7)); button.add_theme_font_size_override("font_size",12)
 		button.pressed.connect(func() -> void:
 			selected_slot=i
-			if session!=null: session.equip(["axe","pickaxe","hammer","hand","hand","hand","hand","hand"][i]))
+			if session!=null: session.equip(hotbar_slots[i] if hotbar_slots[i] in TOOL_IDS else "hand"))
 		_hotbar.add_child(button); _slots.append(button)
-		button.icon=Items.icon(HOTBAR[i]); button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",46); button.tooltip_text=HOTBAR[i].capitalize()
 		var number: Label=label(str(i+1),11,Color("e6dcc3")); number.position=Vector2(6,2); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(number); _slot_numbers.append(number)
 		var count: Label=label("",11); count.position=Vector2(38,49); count.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(count); _slot_counts.append(count)
+	_refresh_hotbar_slots()
 	var health_row: HBoxContainer = HBoxContainer.new(); health_row.add_theme_constant_override("separation", 8); _root.add_child(health_row)
 	health_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); health_row.offset_left=-274; health_row.offset_right=274; health_row.offset_top=-128; health_row.offset_bottom=-110
 	health_row.add_child(label("HEALTH", 11, Color("e0a9a4")))
@@ -138,9 +147,40 @@ func close_menu() -> void:
 func set_hotbar_visible(value: bool) -> void:
 	hotbar_enabled = value
 	_hotbar.visible = value and not menu_open and session.running
+	_save_hotbar_prefs()
+
+func _save_hotbar_prefs() -> void:
 	var preferences: ConfigFile = ConfigFile.new()
-	preferences.set_value("ui", "hotbar", value)
+	preferences.load("user://inventory_ui.cfg")
+	preferences.set_value("ui", "hotbar", hotbar_enabled)
+	var packed: PackedStringArray = PackedStringArray()
+	for slot: String in hotbar_slots: packed.append(slot)
+	preferences.set_value("ui", "hotbar_slots", packed)
 	preferences.save("user://inventory_ui.cfg")
+
+func _refresh_hotbar_slots() -> void:
+	for i in range(8):
+		var item: String = hotbar_slots[i]
+		_slots[i].icon = Items.icon(item) if not item.is_empty() else null
+		_slots[i].tooltip_text = item.capitalize() if not item.is_empty() else "Empty slot"
+		_slots[i].expand_icon = true; _slots[i].icon_alignment = HORIZONTAL_ALIGNMENT_CENTER; _slots[i].add_theme_constant_override("icon_max_width", 46)
+
+## Puts an item in the first empty hotbar slot. Fails loudly (rather than silently
+## replacing something) if all 8 slots are already taken.
+func pin_to_hotbar(item: String) -> void:
+	if item in hotbar_slots: return
+	var empty: int = hotbar_slots.find("")
+	if empty == -1:
+		show_message("Hotbar is full · unpin something first"); return
+	hotbar_slots[empty] = item
+	_refresh_hotbar_slots(); _save_hotbar_prefs()
+
+func unpin_from_hotbar(item: String) -> void:
+	var slot: int = hotbar_slots.find(item)
+	if slot == -1: return
+	hotbar_slots[slot] = ""
+	if hotbar_slots[selected_slot] == "" and selected_slot == slot and session != null: session.equip("hand")
+	_refresh_hotbar_slots(); _save_hotbar_prefs()
 func show_message(text: String,duration: float=4) -> void:
 	_notice.text=text; _notice_time=duration
 
@@ -292,10 +332,10 @@ func _process(delta: float) -> void:
 	var inv: Dictionary=session.local_profile.get("inventory",{})
 	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))]):
 		open_page("Inventory")
-	var names: Array[String]=["Axe","Pickaxe","Hammer","Wood","Stone","Fiber","Planks","Rope"]
 	for i in range(8):
+		var item: String=hotbar_slots[i]
 		_slots[i].text=""
-		_slot_counts[i].text=str(inv.get(HOTBAR[i],0)) if i>=3 else ""
+		_slot_counts[i].text=str(inv.get(item,0)) if not item.is_empty() and item not in TOOL_IDS else ""
 		_slots[i].add_theme_stylebox_override("normal",_slot_selected if i==selected_slot else _slot_background)
 
 	_context_timer+=delta
@@ -352,6 +392,10 @@ func _inventory(content: VBoxContainer) -> void:
 				var tile: PanelContainer=PanelContainer.new(); tile.custom_minimum_size=Vector2(0,68)
 				tile.add_theme_stylebox_override("panel",style(Color(0.13,0.24,0.16,0.9),8)); box.add_child(tile)
 				var icon: TextureRect=TextureRect.new(); icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(0,68); icon.texture=Items.icon(item); tile.add_child(icon)
+				var slot_index: int=hotbar_slots.find(item)
+				if slot_index != -1:
+					var badge: Label=label(str(slot_index+1),11,Color("173c26")); badge.add_theme_color_override("font_outline_color",Color("f3b45d")); badge.add_theme_constant_override("outline_size",6)
+					badge.position=Vector2(6,4); badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(badge)
 				var select: Button=Button.new(); select.text=item.capitalize()+"  ×"+str(count); select.focus_mode=Control.FOCUS_NONE; select.custom_minimum_size.y=34
 				select.pressed.connect(func() -> void: inventory_item = item; open_page("Inventory")); box.add_child(select)
 		if grid.get_child_count() == 0: grid.add_child(label("No items in this category.", 15))
@@ -375,6 +419,8 @@ func _inventory(content: VBoxContainer) -> void:
 			var equipped: String = str(session.local_profile.get("equipped", "hand"))
 			if equipped == inventory_item: button("Unequip (use hands)", func() -> void: session.equip("hand"), actions)
 			else: button("Equip", func() -> void: session.equip(inventory_item), actions)
+		if inventory_item in hotbar_slots: button("Unpin from hotbar", func() -> void: unpin_from_hotbar(inventory_item); open_page("Inventory"), actions)
+		else: button("Pin to hotbar", func() -> void: pin_to_hotbar(inventory_item); open_page("Inventory"), actions)
 		button("Remove one", func() -> void: session.inventory_action(inventory_item, "discard"), actions)
 	button("Back to game", close_menu, content)
 

@@ -72,7 +72,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key: int=event.physical_keycode if event.physical_keycode!=0 else event.keycode
 		if key>=KEY_1 and key<=KEY_8:
 			hud.selected_slot=key-KEY_1
-			var tool: String=["axe","pickaxe","hammer","hand","hand","hand","hand","hand"][hud.selected_slot]
+			var slot_item: String=hud.hotbar_slots[hud.selected_slot]
+			var tool: String=slot_item if slot_item in hud.TOOL_IDS else "hand"
 			if session.has_method("equip"): session.equip(tool)
 			builder.enabled=false; session.build_hint=""
 		elif key==KEY_B:
