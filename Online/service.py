@@ -44,8 +44,23 @@ with db.begin() as c:
         "CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires BIGINT NOT NULL, scope TEXT NOT NULL)",
         "CREATE TABLE IF NOT EXISTS grants (account TEXT NOT NULL, channel TEXT NOT NULL, PRIMARY KEY(account,channel))",
         "CREATE TABLE IF NOT EXISTS releases (channel TEXT PRIMARY KEY, envelope TEXT NOT NULL, game_version TEXT NOT NULL, protocol INTEGER NOT NULL)",
+        "CREATE TABLE IF NOT EXISTS password_resets (account TEXT PRIMARY KEY, otp_hash TEXT NOT NULL, expires BIGINT NOT NULL)",
     ]:
         c.execute(text(sql))
+# Own transaction: a duplicate-column/index error aborts the whole transaction on
+# Postgres, which would otherwise take the CREATE TABLE statements above down with it.
+try:
+    with db.begin() as c:
+        c.execute(text("ALTER TABLE accounts ADD COLUMN email TEXT"))
+except Exception:
+    pass
+try:
+    with db.begin() as c:
+        # NULL emails don't collide with each other under a unique index (standard
+        # SQL behavior), so accounts without an email yet are unaffected.
+        c.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_idx ON accounts (email)"))
+except Exception:
+    pass
 
 app = FastAPI(title="Amiin Studio Online", docs_url=None, redoc_url=None)
 passwords = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
@@ -106,6 +121,13 @@ class Credentials(BaseModel):
     password: str = Field(min_length=12, max_length=128)
 
 
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class RegisterData(Credentials):
+    email: str | None = Field(default=None, max_length=254)
+
+
 def hash_password(value):
     with password_slots:
         return passwords.hash(value)
@@ -123,7 +145,7 @@ def identity(request, scopes=("launcher", "game")):
     bearer = request.headers.get("authorization", "")
     if not bearer.startswith("Bearer "):
         raise HTTPException(401, "Sign in to Amiin Studio.")
-    rows = query("SELECT a.id,a.name,s.scope FROM accounts a JOIN sessions s ON s.account=a.id WHERE s.hash=:hash AND s.expires>:now",
+    rows = query("SELECT a.id,a.name,a.email,s.scope FROM accounts a JOIN sessions s ON s.account=a.id WHERE s.hash=:hash AND s.expires>:now",
                  hash=digest(bearer[7:]), now=int(time.time()))
     if not rows or rows[0]["scope"] not in scopes:
         raise HTTPException(401, "Your session expired. Sign in again.")
@@ -140,16 +162,20 @@ def allow_channel(account, channel):
 
 
 @app.post("/auth/register")
-def register(data: Credentials, request: Request):
+def register(data: RegisterData, request: Request):
     throttle((request.client.host, "register"), 4, 3600)
+    email = data.email.strip().lower() if data.email else None
+    if email and not EMAIL_PATTERN.match(email):
+        raise HTTPException(400, "That doesn't look like a valid email address.")
     recovery = secrets.token_urlsafe(24)
     aid = secrets.token_hex(16)
     try:
-        query("INSERT INTO accounts VALUES (:id,:name,:password,:recovery)", id=aid,
-              name=data.username.lower(), password=hash_password(data.password), recovery=digest(recovery))
+        query("INSERT INTO accounts (id,name,password,recovery,email) VALUES (:id,:name,:password,:recovery,:email)",
+              id=aid, name=data.username.lower(), password=hash_password(data.password),
+              recovery=digest(recovery), email=email)
     except IntegrityError:
-        raise HTTPException(409, "That explorer name is unavailable.")
-    return {"token": new_session(aid), "recovery_code": recovery, "username": data.username.lower()}
+        raise HTTPException(409, "That explorer name or email is already in use.")
+    return {"token": new_session(aid), "recovery_code": recovery, "username": data.username.lower(), "has_email": email is not None}
 
 
 @app.post("/auth/login")
@@ -164,7 +190,7 @@ def login(data: Credentials, request: Request):
         raise HTTPException(401, "Name or password is incorrect.")
     if not rows:
         raise HTTPException(401, "Name or password is incorrect.")
-    return {"token": new_session(rows[0]["id"]), "username": rows[0]["name"]}
+    return {"token": new_session(rows[0]["id"]), "username": rows[0]["name"], "has_email": bool(rows[0].get("email"))}
 
 
 class Recovery(Credentials):
@@ -185,6 +211,94 @@ def recover(data: Recovery, request: Request):
     return {"recovery_code": code}
 
 
+class SetEmail(BaseModel):
+    email: str = Field(max_length=254)
+
+
+@app.post("/auth/set-email")
+def set_email(data: SetEmail, request: Request):
+    user = identity(request, ("launcher",))
+    email = data.email.strip().lower()
+    if not EMAIL_PATTERN.match(email):
+        raise HTTPException(400, "That doesn't look like a valid email address.")
+    try:
+        query("UPDATE accounts SET email=:e WHERE id=:id", e=email, id=user["id"])
+    except IntegrityError:
+        raise HTTPException(409, "That email is already linked to another account.")
+    return {"ok": True}
+
+
+def send_email(to, subject, body):
+    """Best-effort email send via SMTP, configured through environment variables.
+    Without SMTP_HOST configured (e.g. in local dev), the message is logged instead
+    of sent so the OTP flow stays testable without real email infrastructure."""
+    host = os.environ.get("SMTP_HOST")
+    if not host:
+        print(f"[email:dev] to={to} subject={subject!r} body={body!r}")
+        return
+    import smtplib
+    from email.mime.text import MIMEText
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER", "")
+    password = os.environ.get("SMTP_PASS", "")
+    sender = os.environ.get("SMTP_FROM", user)
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = to
+    with smtplib.SMTP(host, port, timeout=10) as smtp:
+        smtp.starttls()
+        if user:
+            smtp.login(user, password)
+        smtp.sendmail(sender, [to], msg.as_string())
+
+
+class ForgotPassword(BaseModel):
+    username: str = Field(min_length=3, max_length=24, pattern=r"^[A-Za-z0-9_]+$")
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(data: ForgotPassword, request: Request):
+    throttle((request.client.host, "forgot"), 5, 3600)
+    throttle((data.username.lower(), "forgot-name"), 3, 3600)
+    rows = query("SELECT * FROM accounts WHERE name=:n", n=data.username.lower())
+    # Same response whether or not the account/email exists, so this endpoint can't
+    # be used to discover which explorer names are registered.
+    if rows and rows[0].get("email"):
+        otp = f"{secrets.randbelow(1000000):06d}"
+        query("DELETE FROM password_resets WHERE account=:a", a=rows[0]["id"])
+        query("INSERT INTO password_resets VALUES (:a,:h,:e)",
+              a=rows[0]["id"], h=digest(data.username.lower() + ":" + otp), e=int(time.time()) + 600)
+        send_email(rows[0]["email"], "Your Amiin Studio reset code",
+                   f"Your password reset code is {otp}. It expires in 10 minutes. "
+                   "If you didn't request this, you can ignore this email.")
+    return {"ok": True}
+
+
+class ResetWithOtp(Credentials):
+    otp: str = Field(min_length=6, max_length=6, pattern=r"^[0-9]{6}$")
+
+
+@app.post("/auth/reset-password-otp")
+def reset_password_otp(data: ResetWithOtp, request: Request):
+    throttle((request.client.host, "reset-otp"), 8, 3600)
+    rows = query("SELECT * FROM accounts WHERE name=:n", n=data.username.lower())
+    if not rows:
+        raise HTTPException(401, "That code is incorrect or has expired.")
+    reset_rows = query("SELECT * FROM password_resets WHERE account=:a AND expires>:now",
+                        a=rows[0]["id"], now=int(time.time()))
+    expected = digest(data.username.lower() + ":" + data.otp)
+    if not reset_rows or not secrets.compare_digest(reset_rows[0]["otp_hash"], expected):
+        raise HTTPException(401, "That code is incorrect or has expired.")
+    code = secrets.token_urlsafe(24)
+    with db.begin() as c:
+        c.execute(text("UPDATE accounts SET password=:p,recovery=:r WHERE id=:id"),
+                  dict(p=hash_password(data.password), r=digest(code), id=rows[0]["id"]))
+        c.execute(text("DELETE FROM sessions WHERE account=:a"), dict(a=rows[0]["id"]))
+        c.execute(text("DELETE FROM password_resets WHERE account=:a"), dict(a=rows[0]["id"]))
+    return {"recovery_code": code}
+
+
 @app.post("/auth/logout")
 def logout(request: Request):
     identity(request)
@@ -195,7 +309,7 @@ def logout(request: Request):
 @app.get("/auth/me")
 def me(request: Request):
     user = identity(request)
-    return {"id": user["id"], "username": user["name"], "channels": channels(user["id"])}
+    return {"id": user["id"], "username": user["name"], "channels": channels(user["id"]), "has_email": bool(user.get("email"))}
 
 
 @app.post("/auth/launch-ticket")

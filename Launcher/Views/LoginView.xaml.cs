@@ -16,4 +16,9 @@ public partial class LoginView : UserControl
     {
         if (DataContext is LoginViewModel vm) vm.Password = PasswordInput.Password;
     }
+
+    private void NewPasswordInput_PasswordChanged(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (DataContext is LoginViewModel vm) vm.NewPassword = NewPasswordInput.Password;
+    }
 }

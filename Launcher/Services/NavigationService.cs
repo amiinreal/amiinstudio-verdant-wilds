@@ -52,6 +52,7 @@ public class NavigationService : ObservableObject
         if (_state.Token.Length > 0)
             try { await _api.Send("/auth/logout", new { }); } catch { /* best-effort */ }
         _state.Token = ""; _state.Games.Clear();
+        RememberedSession.Clear();
         NavigateToLogin();
     }
 

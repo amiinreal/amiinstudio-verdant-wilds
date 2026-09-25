@@ -65,8 +65,33 @@ public class Program
         var navigation = new NavigationService(state, api);
         state.Navigation = navigation;
         navigation.NavigateToLogin();
+        _ = TryAutoLoginAsync(state, api, navigation);
 
         var window = new MainWindow(navigation);
         app.Run(window);
+    }
+
+    // "Remember me": the login screen above is shown immediately so the window never looks
+    // blank, and this swaps to the library once (if) the remembered token still checks out.
+    private static async Task TryAutoLoginAsync(AppState state, ApiService api, NavigationService navigation)
+    {
+        var remembered = RememberedSession.Load();
+        if (remembered is null || state.Config is null) return;
+        try
+        {
+            state.Token = remembered.Value.Token;
+            var me = await api.Send("/auth/me");
+            state.Channels = me.GetProperty("channels").EnumerateArray().Select(c => c.GetString()!).ToList();
+            state.Channel = state.Channels.FirstOrDefault() ?? "public";
+            state.Username = me.GetProperty("username").GetString() ?? remembered.Value.Username;
+            await navigation.LoadLibraryAsync();
+            navigation.NavigateToLibrary();
+        }
+        catch
+        {
+            state.Token = "";
+            RememberedSession.Clear();
+            // Login screen (already showing) is left as-is for a manual sign-in.
+        }
     }
 }

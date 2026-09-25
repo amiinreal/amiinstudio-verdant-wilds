@@ -32,69 +32,150 @@
         <!-- Form side -->
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="56" MaxWidth="380" HorizontalAlignment="Left">
 
-            <TextBlock Text="Sign in to continue" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
-                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"
-                       Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVisInverse}}"/>
-            <TextBlock Text="Recover your account" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
-                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"
-                       Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+            <!-- ===================== Add-email prompt (shown once, right after a successful
+                 sign-in/create-account for an account with no email on file) ===================== -->
+            <StackPanel Visibility="{Binding NeedsEmailPrompt, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="Add a recovery email?" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+                <TextBlock Text="If you ever forget your password, we can email you a reset code. You can always add this later from Settings." FontSize="13"
+                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
 
-            <TextBlock Text="EXPLORER NAME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,0,0,6"/>
-            <!-- No custom Style/ControlTemplate here on purpose: a ControlTemplate providing
-                 PART_ContentHost silently fails to render any typed text for TextBox/PasswordBox
-                 in this app (confirmed by extensive testing), no matter the color. The default
-                 template is the only configuration proven to reliably paint text, so rounding
-                 is done with a wrapping Border instead of a custom template. -->
-            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
-                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                         Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
-                         Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
-            </Border>
-
-            <TextBlock Text="PASSWORD · at least 12 characters" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"/>
-            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
-                <PasswordBox x:Name="PasswordInput" shell:WindowChrome.IsHitTestVisibleInChrome="True" PasswordChanged="PasswordInput_PasswordChanged"
+                <TextBlock Text="EMAIL" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,0,0,6"/>
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
+                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
                              Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
                              Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
-            </Border>
+                </Border>
 
-            <TextBlock Text="RECOVERY CODE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
-                       Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
-            <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
-                    Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}">
-                <TextBox Text="{Binding RecoveryCode, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                         Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
-                         Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
-            </Border>
+                <Grid Margin="0,18,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Save" Style="{StaticResource PrimaryButtonStyle}" Height="44"
+                            Command="{Binding SaveEmailCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Grid.Column="1" Content="Skip for now" Style="{StaticResource GhostButtonStyle}" Height="44" Margin="8,0,0,0"
+                            Command="{Binding SkipEmailCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
 
-            <Grid Margin="0,18,0,0" Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVisInverse}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Content="Sign in" Style="{StaticResource PrimaryButtonStyle}" Height="44"
-                        Command="{Binding SignInCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
-                        shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                <Button Grid.Column="1" Content="Create account" Style="{StaticResource GhostButtonStyle}" Height="44" Margin="8,0,0,0"
-                        Command="{Binding CreateAccountCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
-                        shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-            </Grid>
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="13"
+                           Foreground="{Binding StatusIsError, Converter={StaticResource ErrorColorConverter}}"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource StringToVis}}"/>
+            </StackPanel>
 
-            <Button Content="Reset password" Style="{StaticResource PrimaryButtonStyle}" Height="44" Margin="0,18,0,0" HorizontalAlignment="Left" Padding="24,12"
-                    Command="{Binding ConfirmRecoveryCommand}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                    Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+            <!-- ===================== Normal sign-in / recovery-code / forgot-password ===================== -->
+            <StackPanel Visibility="{Binding NeedsEmailPrompt, Converter={StaticResource BoolToVisInverse}}">
 
-            <Button Content="{Binding RecoveryToggleLabel}" Style="{StaticResource TextLinkButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0"
-                    Command="{Binding ToggleRecoveryCommand}" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                <TextBlock Text="Sign in to continue" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"
+                           Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="Recover your account" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"
+                           Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="Forgot your password?" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"
+                           Visibility="{Binding IsForgotMode, Converter={StaticResource BoolToVis}}"/>
 
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="13"
-                       Foreground="{Binding StatusIsError, Converter={StaticResource ErrorColorConverter}}"
-                       Visibility="{Binding StatusMessage, Converter={StaticResource StringToVis}}"/>
+                <TextBlock Text="EXPLORER NAME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,0,0,6"/>
+                <!-- No custom Style/ControlTemplate here on purpose: a ControlTemplate providing
+                     PART_ContentHost silently fails to render any typed text for TextBox/PasswordBox
+                     in this app (confirmed by extensive testing), no matter the color. The default
+                     template is the only configuration proven to reliably paint text, so rounding
+                     is done with a wrapping Border instead of a custom template. -->
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42">
+                    <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                             Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                             Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+                </Border>
 
-            <TextBlock Text="{Binding DevBanner}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource GameGoldBrush}"
-                       Visibility="{Binding DevBanner, Converter={StaticResource StringToVis}}"/>
+                <TextBlock Text="PASSWORD · at least 12 characters" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
+                           Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVis}}"/>
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
+                        Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVis}}">
+                    <PasswordBox x:Name="PasswordInput" shell:WindowChrome.IsHitTestVisibleInChrome="True" PasswordChanged="PasswordInput_PasswordChanged"
+                                 Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                                 Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+                </Border>
 
-            <TextBlock Text="{Binding VersionLabel}" FontSize="11" Foreground="{StaticResource TextFaintBrush}" Margin="0,28,0,0"/>
+                <CheckBox Content="Remember me" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,12,0,0"
+                           IsChecked="{Binding RememberMe}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                           Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVis}}"/>
+
+                <!-- Recovery-code flow -->
+                <TextBlock Text="RECOVERY CODE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
+                           Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
+                        Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}">
+                    <TextBox Text="{Binding RecoveryCode, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                             Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                             Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+                </Border>
+
+                <!-- Forgot-password (email + one-time code) flow -->
+                <TextBlock Text="6-DIGIT CODE FROM YOUR EMAIL" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
+                           Visibility="{Binding ShowOtpFields, Converter={StaticResource BoolToVis}}"/>
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
+                        Visibility="{Binding ShowOtpFields, Converter={StaticResource BoolToVis}}">
+                    <TextBox Text="{Binding OtpCode, UpdateSourceTrigger=PropertyChanged}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                             Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                             Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14" MaxLength="6"/>
+                </Border>
+                <TextBlock Text="NEW PASSWORD · at least 12 characters" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource GameGoldBrush}" Margin="0,14,0,6"
+                           Visibility="{Binding ShowOtpFields, Converter={StaticResource BoolToVis}}"/>
+                <Border CornerRadius="8" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" Height="42"
+                        Visibility="{Binding ShowOtpFields, Converter={StaticResource BoolToVis}}">
+                    <PasswordBox x:Name="NewPasswordInput" shell:WindowChrome.IsHitTestVisibleInChrome="True" PasswordChanged="NewPasswordInput_PasswordChanged"
+                                 Background="Transparent" BorderThickness="0" Padding="12,0" VerticalContentAlignment="Center"
+                                 Foreground="{StaticResource BrandOrangeBrush}" CaretBrush="{StaticResource BrandOrangeBrush}" FontSize="14"/>
+                </Border>
+
+                <!-- Sign in / Create account -->
+                <Grid Margin="0,18,0,0" Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Sign in" Style="{StaticResource PrimaryButtonStyle}" Height="44"
+                            Command="{Binding SignInCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <Button Grid.Column="1" Content="Create account" Style="{StaticResource GhostButtonStyle}" Height="44" Margin="8,0,0,0"
+                            Command="{Binding CreateAccountCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+
+                <Button Content="Reset password" Style="{StaticResource PrimaryButtonStyle}" Height="44" Margin="0,18,0,0" HorizontalAlignment="Left" Padding="24,12"
+                        Command="{Binding ConfirmRecoveryCommand}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Visibility="{Binding IsRecoveryMode, Converter={StaticResource BoolToVis}}"/>
+
+                <Button Content="Send code" Style="{StaticResource PrimaryButtonStyle}" Height="44" Margin="0,18,0,0" HorizontalAlignment="Left" Padding="24,12"
+                        Command="{Binding RequestOtpCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Visibility="{Binding ShowRequestOtpButton, Converter={StaticResource BoolToVis}}"/>
+                <Button Content="Reset password" Style="{StaticResource PrimaryButtonStyle}" Height="44" Margin="0,18,0,0" HorizontalAlignment="Left" Padding="24,12"
+                        Command="{Binding ConfirmOtpResetCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource BoolInverse}}"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Visibility="{Binding ShowOtpFields, Converter={StaticResource BoolToVis}}"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Content="{Binding RecoveryToggleLabel}" Style="{StaticResource TextLinkButtonStyle}" HorizontalAlignment="Left"
+                            Command="{Binding ToggleRecoveryCommand}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Visibility="{Binding ShowRecoveryLink, Converter={StaticResource BoolToVis}}"/>
+                    <Button Content="{Binding ForgotToggleLabel}" Style="{StaticResource TextLinkButtonStyle}" HorizontalAlignment="Left" Margin="16,0,0,0"
+                            Command="{Binding ToggleForgotCommand}" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Visibility="{Binding ShowForgotLink, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="13"
+                           Foreground="{Binding StatusIsError, Converter={StaticResource ErrorColorConverter}}"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource StringToVis}}"/>
+
+                <TextBlock Text="{Binding DevBanner}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource GameGoldBrush}"
+                           Visibility="{Binding DevBanner, Converter={StaticResource StringToVis}}"/>
+
+                <TextBlock Text="{Binding VersionLabel}" FontSize="11" Foreground="{StaticResource TextFaintBrush}" Margin="0,28,0,0"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>
