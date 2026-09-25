@@ -10,13 +10,22 @@ static var _scenes: Dictionary = {}
 static func catalog() -> Dictionary:
 	if not _catalog.is_empty():
 		return _catalog
+	refresh_catalog()
+	return _catalog
+
+## Re-scans res://Adventure/data/buildings from disk. catalog() only does this once per
+## process lifetime (cached after the first call), so a piece added after the game was
+## already running would silently never show up in the Build menu until a full restart.
+## build_catalog.gd calls this every time the Build panel opens instead.
+static func refresh_catalog() -> void:
+	_definitions.clear()
+	_catalog.clear()
 	for file: String in DirAccess.get_files_at("res://Adventure/data/buildings"):
 		if not file.ends_with(".tres"): continue
 		var data: Resource=load("res://Adventure/data/buildings/"+file)
 		_definitions[data.id]={"id":data.id,"label":data.display_name,"asset":data.scene.resource_path,"kind":data.snap_type,"footprint":data.footprint,"cost":data.resource_cost,"offset":data.offset,"data":data}
 	for id: String in _definitions:
 		if id not in ["roof_small","roof_square","roof_long","roof_corner"]: _catalog[id]=_definitions[id]
-	return _catalog
 
 static func definition(id: String) -> Dictionary:
 	catalog()

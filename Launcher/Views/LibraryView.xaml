@@ -23,7 +23,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock FontSize="13" Foreground="White" VerticalAlignment="Center">
                     <Run Text="A launcher update is available"/>
-                    <Run Text="{Binding Nav.LauncherLatestVersion, StringFormat='(v{0})'}"/>
+                    <Run Text="{Binding Nav.LauncherLatestVersion, Mode=OneWay, StringFormat='(v{0})'}"/>
                 </TextBlock>
                 <Button Grid.Column="1" Content="Update now" Style="{StaticResource GhostButtonStyle}" Padding="14,6" FontSize="12"
                         Command="{Binding UpdateLauncherCommand}"/>

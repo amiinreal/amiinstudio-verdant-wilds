@@ -48,15 +48,12 @@
                         </StackPanel>
                         <TextBlock Text="{Binding Game.Tagline}" FontSize="14" Foreground="#D9E5DD" Margin="0,10,0,20"/>
                         <StackPanel Orientation="Horizontal">
+                            <!-- Play already handles download/update/play contextually via
+                                 Game.PlayButtonLabel ("Download & Play" / "Update & Play" /
+                                 "Play") and PlayCommand. A separate, unwired download icon
+                                 here was pure clutter that made it look like there were two
+                                 competing actions when only one (Play) actually did anything. -->
                             <Button Content="{Binding Game.PlayButtonLabel}" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding PlayCommand}"/>
-                            <Button Style="{StaticResource IconButtonStyle}" Width="44" Height="44" Margin="10,0,0,0"
-                                    Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1">
-                                <Path Data="{StaticResource IconDownloadArrow}" Style="{StaticResource LineIconStyle}"/>
-                            </Button>
-                            <Button Style="{StaticResource IconButtonStyle}" Width="44" Height="44" Margin="8,0,0,0"
-                                    Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1">
-                                <Path Data="{StaticResource IconGear}" Style="{StaticResource LineIconStyle}"/>
-                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
@@ -173,11 +170,11 @@
                             <Border BorderBrush="{StaticResource BorderBrush1}" BorderThickness="0,1,0,0" Margin="0,18,0,16"/>
 
                             <TextBlock Text="System requirements" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="14" Margin="0,0,0,12"/>
-                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="OS " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementOS}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
-                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="CPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementCpu}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
-                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="GPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementGpu}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
-                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="RAM " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementRam}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
-                            <StackPanel><TextBlock FontSize="12"><Run Text="Storage " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementStorage}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="OS " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementOS, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="CPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementCpu, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="GPU " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementGpu, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel Margin="0,0,0,6"><TextBlock FontSize="12"><Run Text="RAM " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementRam, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
+                            <StackPanel><TextBlock FontSize="12"><Run Text="Storage " FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/><Run Text="{Binding RequirementStorage, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/></TextBlock></StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>

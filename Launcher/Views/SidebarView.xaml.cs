@@ -27,6 +27,10 @@ public partial class SidebarView : UserControl
             ApplyActiveRoute();
         };
         NavLibrary.Checked += (_, _) => Navigate("Library");
+        NavStore.Checked += (_, _) => Navigate("Store");
+        NavDownloads.Checked += (_, _) => Navigate("Downloads");
+        NavFriends.Checked += (_, _) => Navigate("Friends");
+        NavSettings.Checked += (_, _) => Navigate("Settings");
     }
 
     private static void OnActiveRouteChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
@@ -47,7 +51,15 @@ public partial class SidebarView : UserControl
 
     private void Navigate(string route)
     {
-        if (route == "Library" && AppState.Current is not null)
-            AppState.Current.Navigation?.NavigateToLibrary();
+        var nav = AppState.Current?.Navigation;
+        if (nav is null) return;
+        switch (route)
+        {
+            case "Library": nav.NavigateToLibrary(); break;
+            case "Store": nav.NavigateToStore(); break;
+            case "Downloads": nav.NavigateToDownloads(); break;
+            case "Friends": nav.NavigateToFriends(); break;
+            case "Settings": nav.NavigateToSettings(); break;
+        }
     }
 }

@@ -13,6 +13,7 @@ var refresh: float = 0
 
 func setup(owner_hud: CanvasLayer) -> void:
 	hud=owner_hud
+	Modules.refresh_catalog()
 	var config: ConfigFile=ConfigFile.new()
 	if config.load("user://build_favorites.cfg")==OK: favorites=config.get_value("catalog","favorites",PackedStringArray())
 	var row: HBoxContainer=HBoxContainer.new(); add_child(row)

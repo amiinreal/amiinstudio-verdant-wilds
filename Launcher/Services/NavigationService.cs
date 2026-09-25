@@ -40,6 +40,12 @@ public class NavigationService : ObservableObject
     public void NavigateToLogin() => CurrentViewModel = new LoginViewModel(_state, _api, this);
     public void NavigateToLibrary() => CurrentViewModel = new LibraryViewModel(_state, this);
     public void NavigateToGameDetail(GameModel game) => CurrentViewModel = new GameDetailViewModel(game, _state, this);
+    public void NavigateToDownloads() => CurrentViewModel = new DownloadsViewModel(_state, this);
+    public void NavigateToSettings() => CurrentViewModel = new SettingsViewModel(_state, this);
+    public void NavigateToStore() => CurrentViewModel = new PlaceholderViewModel("Store",
+        "Amiin Studio only publishes The Verdant Wilds right now. More games will show up here as they ship.");
+    public void NavigateToFriends() => CurrentViewModel = new PlaceholderViewModel("Friends",
+        "There's no friends list yet -- host a world from inside the game and share your invite code with whoever you want to play with.");
 
     public async Task SignOutAsync()
     {

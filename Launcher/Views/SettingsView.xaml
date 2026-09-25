@@ -1,0 +1,28 @@
+<UserControl x:Class="Amiin.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" Background="{StaticResource BackgroundBrush}">
+    <StackPanel Margin="44" MaxWidth="480" HorizontalAlignment="Left">
+        <TextBlock Text="Settings" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="Bold"
+                   Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+
+        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush1}" BorderThickness="1" CornerRadius="10" Padding="18">
+            <StackPanel>
+                <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Explorer name" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Username, Mode=OneWay}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right"/></Grid>
+                <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Channel" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Channel, Mode=OneWay}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right"/></Grid>
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Launcher version" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding LauncherVersion, Mode=OneWay}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right"/></Grid>
+            </StackPanel>
+        </Border>
+
+        <Button Content="Sign out" Style="{StaticResource GhostButtonStyle}" HorizontalAlignment="Left" Margin="0,20,0,0" Padding="20,10"
+                Command="{Binding SignOutCommand}"/>
+    </StackPanel>
+</UserControl>
