@@ -49,18 +49,24 @@ with db.begin() as c:
         c.execute(text(sql))
 # Own transaction: a duplicate-column/index error aborts the whole transaction on
 # Postgres, which would otherwise take the CREATE TABLE statements above down with it.
-try:
-    with db.begin() as c:
-        c.execute(text("ALTER TABLE accounts ADD COLUMN email TEXT"))
-except Exception:
-    pass
-try:
-    with db.begin() as c:
-        # NULL emails don't collide with each other under a unique index (standard
-        # SQL behavior), so accounts without an email yet are unaffected.
-        c.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_idx ON accounts (email)"))
-except Exception:
-    pass
+# Printed (not silently swallowed) when it's something other than "already exists",
+# since a permissions error here means every request touching accounts.email will
+# 500 at runtime with no other warning -- this happened once already: the app's own
+# DB role could CREATE its own new tables but couldn't ALTER a table it didn't own,
+# and the migration failing silently made that invisible until a live 500 in prod.
+def migrate(sql):
+    try:
+        with db.begin() as c:
+            c.execute(text(sql))
+    except Exception as e:
+        if "already exists" not in str(e).lower():
+            print(f"[migration] FAILED: {sql!r}: {e}")
+
+
+migrate("ALTER TABLE accounts ADD COLUMN email TEXT")
+# NULL emails don't collide with each other under a unique index (standard SQL
+# behavior), so accounts without an email yet are unaffected.
+migrate("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_idx ON accounts (email)")
 
 app = FastAPI(title="Amiin Studio Online", docs_url=None, redoc_url=None)
 passwords = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
