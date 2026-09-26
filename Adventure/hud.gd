@@ -368,20 +368,62 @@ func _process(delta: float) -> void:
 	_prompt.visible=not menu_open and not _prompt.text.is_empty()
 	if _map!=null and is_instance_valid(_map): _map.queue_redraw()
 
+## Small square tile shared by the hotbar mirror and the storage grid -- deliberately much
+## smaller than the old per-stack cards, closer to a Minecraft-style slot.
+func _slot_tile(item: String, count: int, selected: bool, slot_number: int) -> PanelContainer:
+	var tile: PanelContainer=PanelContainer.new(); tile.custom_minimum_size=Vector2(52,52)
+	tile.add_theme_stylebox_override("panel",_slot_selected if selected else _slot_background)
+	if not item.is_empty():
+		var icon: TextureRect=TextureRect.new(); icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); icon.texture=Items.icon(item); icon.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(icon)
+		if count > 1:
+			var badge: Label=label(str(count),12,Color("eee5c5")); badge.add_theme_color_override("font_outline_color",Color("101c1a")); badge.add_theme_constant_override("outline_size",5)
+			badge.position=Vector2(4,30); badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(badge)
+	if slot_number > 0:
+		var number: Label=label(str(slot_number),10,Color("e6dcc3")); number.position=Vector2(3,1); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(number)
+	return tile
+
 func _inventory(content: VBoxContainer) -> void:
 	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))])
 	var equipment: VBoxContainer=card(content)
 	equipment.add_child(label("EQUIPPED  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),14,Color("8fa38f")))
-	equipment.add_child(label("E / I close inventory · H show / hide hotbar",12,Color("8fa38f")))
+	equipment.add_child(label("Click a hotbar slot below (or press 1-8) to equip it · E / I close · H show / hide hotbar",12,Color("8fa38f")))
 	var visibility: CheckButton = CheckButton.new()
 	visibility.text = "Show hotbar while playing"
 	visibility.button_pressed = hotbar_enabled
 	visibility.toggled.connect(set_hotbar_visible)
 	equipment.add_child(visibility)
 
-	var categories: HBoxContainer=HBoxContainer.new(); categories.add_theme_constant_override("separation",8); content.add_child(categories)
-	var grid: GridContainer=GridContainer.new(); grid.columns=3; grid.add_theme_constant_override("h_separation",12); grid.add_theme_constant_override("v_separation",12); content.add_child(grid)
-	var info: Label=label("Select a stack to inspect it.",14,Color("adc4b5"))
+	# Hotbar mirror: the only 8 slots that can be equipped, exactly like the real hotbar.
+	var hotbar_card: VBoxContainer=card(content)
+	hotbar_card.add_child(label("HOTBAR  ·  8 slots",11,Color("8fa38f")))
+	var hotbar_row: HBoxContainer=HBoxContainer.new(); hotbar_row.add_theme_constant_override("separation",6); hotbar_card.add_child(hotbar_row)
+	var inv: Dictionary=session.local_profile.get("inventory",{})
+	for i in range(8):
+		var item: String=hotbar_slots[i]
+		var wrapper: Button=Button.new(); wrapper.custom_minimum_size=Vector2(52,52); wrapper.focus_mode=Control.FOCUS_NONE
+		wrapper.add_theme_stylebox_override("normal",_slot_selected if i==selected_slot else _slot_background)
+		wrapper.add_theme_stylebox_override("hover",_slot_selected if i==selected_slot else _slot_background)
+		if not item.is_empty():
+			wrapper.icon=Items.icon(item); wrapper.expand_icon=true; wrapper.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; wrapper.add_theme_constant_override("icon_max_width",40)
+			wrapper.tooltip_text=item.capitalize()+" ×"+str(inv.get(item,0))
+		var slot_i: int=i
+		wrapper.pressed.connect(func() -> void:
+			selected_slot=slot_i
+			if not item.is_empty(): inventory_item=item
+			if session!=null: session.equip(item if item in TOOL_IDS else "hand")
+			open_page("Inventory"))
+		hotbar_row.add_child(wrapper)
+		var number: Label=label(str(i+1),10,Color("e6dcc3")); number.position=Vector2(4,2); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; wrapper.add_child(number)
+		if not item.is_empty() and int(inv.get(item,0))>1:
+			var badge: Label=label(str(inv.get(item,0)),12,Color("eee5c5")); badge.add_theme_color_override("font_outline_color",Color("101c1a")); badge.add_theme_constant_override("outline_size",5)
+			badge.position=Vector2(4,32); badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; wrapper.add_child(badge)
+
+	var storage_card: VBoxContainer=card(content)
+	storage_card.add_child(label("STORAGE  ·  unlimited",11,Color("8fa38f")))
+	var categories: HBoxContainer=HBoxContainer.new(); categories.add_theme_constant_override("separation",8); storage_card.add_child(categories)
+	var grid: GridContainer=GridContainer.new(); grid.columns=8; grid.add_theme_constant_override("h_separation",6); grid.add_theme_constant_override("v_separation",6); storage_card.add_child(grid)
+	var info: Label=label("Select a slot to inspect it.",14,Color("adc4b5"))
 	var selected_image: TextureRect=TextureRect.new(); selected_image.custom_minimum_size=Vector2(88,88); selected_image.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; selected_image.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var populate: Callable=func(category: String) -> void:
 		inventory_category = category
@@ -393,23 +435,14 @@ func _inventory(content: VBoxContainer) -> void:
 		for id: String in inventory:
 			var kind: String = "Food" if id in ["meat", "cooked_meat", "bone", "carrot", "wheat", "river_fish", "salmon", "cooked_fish", "bread"] else ("Tools" if id in ["axe","pickaxe","hammer","bucket","water_bucket","fishing_rod"] else ("Farming" if id in ["wheat_seeds","carrot_seeds"] else ("Crafting" if id in ["planks","rope"] else "Resources")))
 			if category!="All" and kind!=category: continue
-			var remaining: int=int(inventory[id])
-			while remaining>0:
-				var amount: int=mini(remaining,99); remaining-=amount
-				var item: String=id; var count: int=amount
-				var panel: PanelContainer=PanelContainer.new(); panel.custom_minimum_size=Vector2(0,150)
-				panel.add_theme_stylebox_override("panel",style(Color(0.09,0.17,0.14,0.92) if item==inventory_item else Color(0.07,0.13,0.11,0.85),11)); grid.add_child(panel)
-				var box: VBoxContainer=VBoxContainer.new(); box.add_theme_constant_override("separation",6); panel.add_child(box)
-				var tile: PanelContainer=PanelContainer.new(); tile.custom_minimum_size=Vector2(0,68)
-				tile.add_theme_stylebox_override("panel",style(Color(0.13,0.24,0.16,0.9),8)); box.add_child(tile)
-				var icon: TextureRect=TextureRect.new(); icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(0,68); icon.texture=Items.icon(item); tile.add_child(icon)
-				var slot_index: int=hotbar_slots.find(item)
-				if slot_index != -1:
-					var badge: Label=label(str(slot_index+1),11,Color("173c26")); badge.add_theme_color_override("font_outline_color",Color("f3b45d")); badge.add_theme_constant_override("outline_size",6)
-					badge.position=Vector2(6,4); badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(badge)
-				var select: Button=Button.new(); select.text=item.capitalize()+"  ×"+str(count); select.focus_mode=Control.FOCUS_NONE; select.custom_minimum_size.y=34
-				select.pressed.connect(func() -> void: inventory_item = item; open_page("Inventory")); box.add_child(select)
-		if grid.get_child_count() == 0: grid.add_child(label("No items in this category.", 15))
+			var count: int=int(inventory[id])
+			if count<=0: continue
+			var item: String=id
+			var tile: PanelContainer=_slot_tile(item,count,item==inventory_item,0)
+			grid.add_child(tile)
+			var select: Button=Button.new(); select.flat=true; select.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); select.focus_mode=Control.FOCUS_NONE
+			select.pressed.connect(func() -> void: inventory_item = item; open_page("Inventory")); tile.add_child(select)
+		if grid.get_child_count() == 0: grid.add_child(label("Nothing in storage yet.", 15))
 	for category: String in ["All","Resources","Tools","Crafting","Food","Farming"]:
 		button(category,func() -> void: populate.call(category),categories)
 	populate.call(inventory_category)
@@ -445,11 +478,7 @@ func _inventory(content: VBoxContainer) -> void:
 		elif inventory_item == "river_fish": button("Cook at fire", func() -> void: session.craft("cook_river_fish"); close_menu(), actions)
 		elif inventory_item == "salmon": button("Cook at fire", func() -> void: session.craft("cook_salmon"); close_menu(), actions)
 		elif inventory_item == "wheat": button("Bake bread", func() -> void: session.craft("bread"); close_menu(), actions)
-		if inventory_item in TOOL_IDS and inventory_item != "hand":
-			var equipped: String = str(session.local_profile.get("equipped", "hand"))
-			if equipped == inventory_item: button("Unequip (use hands)", func() -> void: session.equip("hand"), actions)
-			else: button("Equip", func() -> void: session.equip(inventory_item), actions)
-		if inventory_item in hotbar_slots: button("Unpin from hotbar", func() -> void: unpin_from_hotbar(inventory_item); open_page("Inventory"), actions)
+		if inventory_item in hotbar_slots: button("Unpin from hotbar (back to storage)", func() -> void: unpin_from_hotbar(inventory_item); open_page("Inventory"), actions)
 		else: button("Pin to hotbar", func() -> void: pin_to_hotbar(inventory_item); open_page("Inventory"), actions)
 		button("Remove one", func() -> void: session.inventory_action(inventory_item, "discard"), actions)
 	button("Back to game", close_menu, content)
