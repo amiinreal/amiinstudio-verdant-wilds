@@ -112,7 +112,7 @@ func follow(target: Vector3, delta: float) -> void:
 		var facing: Vector3 = to_target / distance
 		rotation.y = lerp_angle(rotation.y, atan2(-facing.x, -facing.z), 1.0 - exp(-delta * 6.0))
 	var camera: Camera3D = get_viewport().get_camera_3d()
-	visible = camera == null or global_position.distance_squared_to(camera.global_position) < 120.0 * 120.0
+	visible = camera == null or global_position.distance_squared_to(camera.global_position) < 175.0 * 175.0
 	if animator:
 		animator.active = visible
 		var clip: StringName = (&"trot" if trotting else &"walk") if moving else &"idle"
@@ -142,7 +142,7 @@ func _process(delta: float) -> void:
 		# Turn during the last second of the rest, never slide through a walking turn.
 		rotation.y += PI * smoothstep(half_cycle - 1.0, half_cycle, local_time)
 	var camera: Camera3D = get_viewport().get_camera_3d()
-	visible = camera == null or global_position.distance_squared_to(camera.global_position) < 120.0 * 120.0
+	visible = camera == null or global_position.distance_squared_to(camera.global_position) < 175.0 * 175.0
 	if animator:
 		animator.active = visible
 		var clip: StringName = &"walk" if moving else (&"graze" if species == "cow" else &"sniff")

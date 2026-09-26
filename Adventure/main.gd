@@ -63,7 +63,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if builder.enabled:
 			if builder.removal_armed and not builder.removal_id.is_empty(): hud.confirm_removal(builder.removal_id)
 			elif builder.valid: session.place(preload("res://Adventure/modules.gd").catalog().keys()[builder.index],builder.candidate,builder.turn)
-		else: session.gather()
+		else:
+			var equipped: String=str(session.local_profile.get("equipped","hand"))
+			if equipped in ["cooked_meat","cooked_fish","bread","carrot"]: session.inventory_action(equipped,"eat")
+			else: session.gather()
 	if event is InputEventMouseButton and event.pressed and builder.enabled:
 		if event.button_index==MOUSE_BUTTON_RIGHT: builder.enabled=false; session.build_hint=""; hud.open_page("Build")
 		elif event.button_index==MOUSE_BUTTON_WHEEL_UP: builder.index=posmod(builder.index+1,preload("res://Adventure/modules.gd").catalog().size())

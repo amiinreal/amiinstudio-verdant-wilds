@@ -166,5 +166,57 @@ func run() -> void:
 	# The save/load validator must accept this real, in-play farmland data.
 	check(Store.valid_save(store.data, int(store.data.seed)), "farmland data passes save validation")
 
+	# F now tills where the player is looking, not just wherever their feet are standing.
+	var aim_spot: Vector3 = Vector3.INF
+	for radius in range(30, 60):
+		for angle in range(0, 8):
+			var candidate: Vector2 = Vector2(spots[0].x, spots[0].z) + Vector2.from_angle(angle * PI / 4) * radius
+			if Habitat.clear_ground(world, candidate, 1.0):
+				aim_spot = Vector3(candidate.x, world.height_at(candidate), candidate.y); break
+		if aim_spot != Vector3.INF: break
+	check(aim_spot != Vector3.INF, "found an isolated spot to test aim-directed tilling")
+	if aim_spot != Vector3.INF:
+		var before_plots: int = store.data.farmland.size()
+		actor.position = aim_spot
+		actor.facing = 0.0
+		session.clock_time = t + 5.0
+		session.farm()
+		check(store.data.farmland.size() == before_plots + 1, "F tilled a new plot while looking at clear ground")
+		var new_id: String = ""
+		for pid: String in store.data.farmland:
+			if pid != plot_a and pid != plot_b and pid != throwaway_plot: new_id = pid
+		if not new_id.is_empty():
+			var new_p: Vector3 = Vector3(store.data.farmland[new_id].p[0], store.data.farmland[new_id].p[1], store.data.farmland[new_id].p[2])
+			check(Vector2(new_p.x, new_p.z).distance_to(Vector2(actor.position.x, actor.position.z)) > 1.0, "the new plot lands ahead of the player, not exactly underfoot: " + str(new_p))
+
+	# Pinning an item to the hotbar must not also list it in storage -- same stack, shown once.
+	profile.inventory["planks"] = 4
+	game.hud.pin_to_hotbar("planks")
+	game.hud.inventory_category = "All"
+	game.hud.open_page("Inventory")
+	var storage_grid: GridContainer = game.hud._panel.find_children("*", "GridContainer", true, false)[0]
+	var planks_icon: Texture2D = preload("res://Adventure/items.gd").icon("planks")
+	check(planks_icon != null, "planks has an icon to compare against")
+	var duplicate_found: bool = false
+	if planks_icon != null:
+		for tile: Node in storage_grid.get_children():
+			for icon: TextureRect in tile.find_children("*", "TextureRect", true, false):
+				if icon.texture == planks_icon: duplicate_found = true
+	check(not duplicate_found, "a fully hotbar-pinned item is not also duplicated in storage")
+	game.hud.unpin_from_hotbar("planks")
+
+	# Eating with food equipped works from a left click, not just the inventory panel.
+	profile.inventory["cooked_meat"] = 1
+	profile.fullness = 20
+	store.equip(1, "cooked_meat")
+	session._publish_profile(1)
+	session.clock_time = t + 10.0
+	game.hud.close_menu()
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	game._unhandled_input(click)
+	check(int(profile.inventory.get("cooked_meat", 0)) == 0 and float(profile.fullness) > 20.0, "left-click with food equipped eats it instead of using a tool")
+
 	print("FARMING_CHECK_COMPLETE failures=", failures)
 	quit(failures)

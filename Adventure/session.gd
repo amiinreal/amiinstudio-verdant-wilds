@@ -821,13 +821,17 @@ func _show_affection(animal_id: String) -> void:
 	if animal != null: animal.show_affection()
 
 ## One context-sensitive key: fish or fill a bucket at the water's edge, or till / plant /
-## water / harvest a farm plot, whichever the player is standing near with what they hold.
+## water / harvest a farm plot -- resolved against where the player is *looking* (a point
+## ~1.8 m ahead, on the ground), not just wherever they happen to be standing, so tilling
+## and targeting a specific plot both follow the crosshair like aiming at a block.
 func farm() -> void:
 	var id: int = local_id()
 	if not players.has(id): return
 	var body: CharacterBody3D = players[id]
 	var equipped: String = str(local_profile.get("equipped", "hand"))
-	var near_water: bool = world.near_water(body.position)
+	var aim: Vector3 = body.position + Basis(Vector3.UP, body.facing) * Vector3(0, 0, -1.8)
+	aim.y = world.height_at(Vector2(aim.x, aim.z))
+	var near_water: bool = world.near_water(aim) or world.near_water(body.position)
 	if equipped == "fishing_rod" and near_water:
 		if is_authority(): _fish(1)
 		else: _fish_request.rpc_id(1)
@@ -836,7 +840,8 @@ func farm() -> void:
 		if is_authority(): _farm(1, "fill_bucket", "", body.position)
 		else: _farm_request.rpc_id(1, "fill_bucket", "", body.position)
 		return
-	var plot_id: String = world.farmland_view.nearest(body.position) if is_instance_valid(world.farmland_view) else ""
+	var plot_id: String = world.farmland_view.nearest(aim) if is_instance_valid(world.farmland_view) else ""
+	if plot_id.is_empty() and is_instance_valid(world.farmland_view): plot_id = world.farmland_view.nearest(body.position)
 	var mode: String
 	if not plot_id.is_empty():
 		var record: Dictionary = world.farmland_view.plots.get(plot_id, {})
@@ -856,8 +861,9 @@ func farm() -> void:
 		gather(); return
 	else:
 		mode = "till"
-	if is_authority(): _farm(1, mode, plot_id, body.position)
-	else: _farm_request.rpc_id(1, mode, plot_id, body.position)
+	var target: Vector3 = aim if mode == "till" else body.position
+	if is_authority(): _farm(1, mode, plot_id, target)
+	else: _farm_request.rpc_id(1, mode, plot_id, target)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _farm_request(mode: String, plot_id: String, p: Vector3) -> void:

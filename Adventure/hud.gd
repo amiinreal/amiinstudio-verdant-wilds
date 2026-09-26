@@ -7,7 +7,7 @@ signal build_requested(index: int)
 const Items = preload("res://Adventure/items.gd")
 const Branding = preload("res://Adventure/branding.gd")
 const DEFAULT_HOTBAR: Array[String]=["axe","pickaxe","hammer","wood","stone","fiber","planks","rope"]
-const TOOL_IDS: Array[String]=["axe","pickaxe","hammer","hand","bucket","water_bucket","fishing_rod","wheat_seeds","carrot_seeds","bone","meat"]
+const TOOL_IDS: Array[String]=["axe","pickaxe","hammer","hand","bucket","water_bucket","fishing_rod","wheat_seeds","carrot_seeds","bone","meat","cooked_meat","cooked_fish","bread","carrot"]
 ## Which item sits in each of the 8 hotbar slots (never bigger than 8; "" is empty). Pinned
 ## and unpinned from the Inventory page, persisted alongside the hotbar-visibility preference.
 var hotbar_slots: Array[String]=DEFAULT_HOTBAR.duplicate()
@@ -28,6 +28,7 @@ var _body: VBoxContainer
 var _hotbar: HBoxContainer
 var _slots: Array[Button]=[]
 var _prompt: Label
+var _crosshair: Label
 var _notice: Label
 var _notice_time: float=0
 var _context_timer: float=0
@@ -95,8 +96,12 @@ func _ready() -> void:
 	_notice.add_theme_color_override("font_outline_color",Color("142524")); _notice.add_theme_constant_override("outline_size",5)
 	_controls=PanelContainer.new(); _controls.add_theme_stylebox_override("panel",style(Color(0.018,0.05,0.06,0.88),12)); _root.add_child(_controls)
 	_controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT); _controls.offset_left=16; _controls.offset_right=220; _controls.offset_top=-345; _controls.offset_bottom=-100; _controls.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	_controls.add_child(label("W A S D   Move\nMouse     Look\nSpace     Jump / surface\nShift     Run / swim faster\nLMB / Q   Use tool\nT         Pet / feed animal\nF         Farm: till/plant/water/harvest, fish\n1–8       Select item\nE         Inventory\nB         Build catalog\nC         Clear grass\nV         Flatten land\nEsc       Menu",12,Color("dddacb")))
-	_controls.hide(); _hotbar.hide(); _prompt.hide()
+	_controls.add_child(label("W A S D   Move\nMouse     Look\nSpace     Jump / surface\nShift     Run / swim faster\nLMB / Q   Use tool (or eat, with food equipped)\nT         Pet / feed animal\nF         Farm: till/plant/water/harvest, fish, fill bucket\n1–8       Select item\nE         Inventory\nB         Build catalog\nC         Clear grass\nV         Flatten land\nEsc       Menu",12,Color("dddacb")))
+	_crosshair=label("+",20,Color(1,1,1,0.85)); _crosshair.add_theme_color_override("font_outline_color",Color(0,0,0,0.6)); _crosshair.add_theme_constant_override("outline_size",3)
+	_crosshair.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; _crosshair.vertical_alignment=VERTICAL_ALIGNMENT_CENTER; _crosshair.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	_crosshair.set_anchors_and_offsets_preset(Control.PRESET_CENTER); _crosshair.offset_left=-10; _crosshair.offset_right=10; _crosshair.offset_top=-12; _crosshair.offset_bottom=12
+	_root.add_child(_crosshair)
+	_controls.hide(); _hotbar.hide(); _prompt.hide(); _crosshair.hide()
 
 func style(color: Color,padding: int=12) -> StyleBoxFlat:
 	var box: StyleBoxFlat=StyleBoxFlat.new(); box.bg_color=color; box.set_corner_radius_all(9)
@@ -330,6 +335,7 @@ func _process(delta: float) -> void:
 		_health_bar.get_parent().visible = not menu_open and hotbar_enabled
 		_health_bar.value = float(session.local_profile.get("health", 100))
 	_controls.visible=not menu_open
+	_crosshair.visible=not menu_open
 	var inv: Dictionary=session.local_profile.get("inventory",{})
 	if menu_open and page == "Inventory" and _inventory_hash != hash([inv, int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))]):
 		open_page("Inventory")
@@ -359,7 +365,7 @@ func _process(delta: float) -> void:
 			else: _context="F · Water soil" if str(session.local_profile.get("equipped",""))=="water_bucket" else "Growing…"
 		elif session.world.near_water(session.local_player().position):
 			var equipped: String=str(session.local_profile.get("equipped",""))
-			_context="F · Cast your line" if equipped=="fishing_rod" else ("F · Fill bucket" if equipped=="bucket" else "Equip a bucket or fishing rod")
+			_context="F · Cast your line" if equipped=="fishing_rod" else ("F · Fill bucket" if equipped=="bucket" else "Craft a bucket (Crafting tab) to collect water here")
 		else:
 			_context="F · Till soil"
 	_prompt.text=session.build_hint if not session.build_hint.is_empty() else _context
@@ -489,6 +495,9 @@ func _inventory(content: VBoxContainer) -> void:
 			if category!="All" and kind!=category: continue
 			var count: int=int(inventory[id])
 			if count<=0: continue
+			# A hotbar slot already shows this exact stack (with its own count badge) --
+			# listing it again in storage would just be the same item twice on screen.
+			if id in hotbar_slots: continue
 			var item: String=id
 			var tile: PanelContainer=_slot_tile(item,count,item==inventory_item,0)
 			grid.add_child(tile)

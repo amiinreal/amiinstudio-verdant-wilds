@@ -5,7 +5,7 @@ const Geo = preload("res://Adventure/geography.gd")
 const Habitat = preload("res://Adventure/animals/habitat.gd")
 ## Procedurally scattered across the whole mainland (not just the 3 settlements), weighted
 ## by forest_density -- denser woodland sees more animals, open/reserved land sees none.
-const WILD_COUNT: int = 40
+const WILD_COUNT: int = 48
 
 func setup(world: Node3D) -> void:
 	name = "WoodlandAnimals"
@@ -40,7 +40,9 @@ func _spawn_wild(world: Node3D, rng: RandomNumberGenerator) -> void:
 		var density: float = world.geography.forest_density(a)
 		if rng.randf() > 0.12 + density * 0.75: continue
 		var roll: float = rng.randf()
-		var kind: String = "cat" if roll < 0.55 else ("dog" if roll < 0.9 else "cow")
+		# Cows were the rarest of the three by a wide margin, which made them hard to find
+		# despite being the main free-pet/food animal -- brought much closer to parity.
+		var kind: String = "cat" if roll < 0.40 else ("dog" if roll < 0.65 else "cow")
 		var b: Vector2 = a + Vector2.from_angle(rng.randf() * TAU) * (1.8 if kind == "cat" else 3.0)
 		if not _clear_corridor(world, a, b, 0.8 if kind == "cow" else 0.45): continue
 		var animal: Node3D = Node3D.new()

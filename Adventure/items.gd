@@ -11,7 +11,11 @@ const TOOLS: Dictionary={
 	"wheat_seeds":{"name":"Wheat seeds","resource":"","model":"res://FarmingFishing/Models/wheat_seeds.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
 	"carrot_seeds":{"name":"Carrot seeds","resource":"","model":"res://FarmingFishing/Models/carrot_seeds.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
 	"bone":{"name":"Bone","resource":"","model":"","grip":Vector3.ZERO,"rotation":Vector3.ZERO},
-	"meat":{"name":"Raw meat","resource":"","model":"res://Adventure/cooking/raw_meat.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO}
+	"meat":{"name":"Raw meat","resource":"","model":"res://Adventure/cooking/raw_meat.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
+	"cooked_meat":{"name":"Grilled meat","resource":"","model":"res://Adventure/cooking/cooked_meat.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
+	"cooked_fish":{"name":"Grilled fish","resource":"","model":"","grip":Vector3.ZERO,"rotation":Vector3.ZERO},
+	"bread":{"name":"Bread","resource":"","model":"","grip":Vector3.ZERO,"rotation":Vector3.ZERO},
+	"carrot":{"name":"Carrot","resource":"","model":"res://FarmingFishing/Models/carrot_harvest.glb","grip":Vector3(0,-0.1,0),"rotation":Vector3.ZERO}
 }
 static var RECIPES: Dictionary={}
 const FOOD_MODELS: Dictionary = {
