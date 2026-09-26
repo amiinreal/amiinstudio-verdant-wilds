@@ -416,6 +416,13 @@ func _physics_process(delta: float) -> void:
 				store.profile(id).fullness = maxf(float(store.profile(id).get("fullness", 50)), 30.0)
 				_respawn(id); _publish_profile(id)
 				_private_message(id, "You starved and respawned at your last checkpoint.")
+			var drop_positions: Dictionary = {}
+			for pid: int in players: drop_positions[pid] = players[pid].position
+			var collected: Array = store.tick_drops(drop_positions)
+			for pickup: Dictionary in collected:
+				_publish_profile(pickup.peer)
+				_private_message(pickup.peer, "Picked up " + str(pickup.amount) + " " + str(pickup.item).replace("_", " ") + ".")
+			if not collected.is_empty(): _send_state()
 		_profile_timer+=delta; _save_timer+=delta
 		if _profile_timer>=2:
 			_profile_timer=0
@@ -866,6 +873,20 @@ func _fish(id: int) -> void:
 	_actions[id] = {"type":"fish", "origin":players[id].position, "due":clock_time + 2.2}
 	_start_action(id, "GatherPlant", players[id].position + Basis(Vector3.UP, players[id].facing) * Vector3(0, 0, -1.2), 2.2)
 	_private_message(id, "Casting your line…")
+
+## Drops the player's whole stack of one item at their feet -- anyone nearby (including
+## other players) can then walk over it to collect it automatically.
+func drop_stack(item: String) -> void:
+	if is_authority(): _drop(1, item)
+	else: _drop_request.rpc_id(1, item)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _drop_request(item: String) -> void:
+	if is_authority(): _drop(multiplayer.get_remote_sender_id(), item)
+
+func _drop(id: int, item: String) -> void:
+	if not running or not players.has(id): return
+	_economy_result(id, store.drop_item(id, item, players[id].position, players[id].facing, clock_time))
 
 func inventory_action(item: String, action: String) -> void:
 	if is_authority(): _inventory_action(1, item, action)

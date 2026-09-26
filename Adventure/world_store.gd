@@ -51,7 +51,7 @@ func enter_account(peer: int, account_id: String) -> Dictionary:
 	return {"id": stable}
 
 func public_delta() -> Dictionary:
-	return {"animals":data.get("animals",{}).duplicate(true),"tamed":data.get("tamed",{}).duplicate(true),"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true),"farmland":data.get("farmland",{}).duplicate(true)}
+	return {"animals":data.get("animals",{}).duplicate(true),"tamed":data.get("tamed",{}).duplicate(true),"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true),"farmland":data.get("farmland",{}).duplicate(true),"dropped":data.get("dropped",{}).duplicate(true)}
 
 func view(peer: int) -> Dictionary:
 	var p: Dictionary=profile(peer).duplicate(true)
@@ -249,6 +249,17 @@ static func valid_save(value: Variant, seed_value: int) -> bool:
 		if not plot.get("owner") is String or not value["profiles"].has(plot["owner"]): return false
 		if not plot.get("p") is Array or plot["p"].size() != 3: return false
 		for n: Variant in plot["p"]:
+			if (not n is float and not n is int) or not is_finite(float(n)) or absf(float(n)) > 1024: return false
+	var dropped: Variant = value.get("dropped", {})
+	if not dropped is Dictionary or dropped.size() > 3000: return false
+	for key: Variant in dropped:
+		var record: Variant = dropped[key]
+		if not key is String or not record is Dictionary: return false
+		if not record.get("item") is String or record["item"].is_empty(): return false
+		var amount: Variant = record.get("amount", 0)
+		if not (amount is int or amount is float) or not is_finite(float(amount)) or float(amount) <= 0 or float(amount) != floorf(float(amount)): return false
+		if not record.get("p") is Array or record["p"].size() != 3: return false
+		for n: Variant in record["p"]:
 			if (not n is float and not n is int) or not is_finite(float(n)) or absf(float(n)) > 1024: return false
 	if not value.get("structures") is Array or value["structures"].size()>12000: return false
 	var edits: Variant=value.get("terrain_edits",{})
@@ -467,6 +478,45 @@ func catch_fish(peer: int, now: float) -> Dictionary:
 	var species: String = "salmon" if randf() < 0.15 else "river_fish"
 	p.inventory[species] = int(p.inventory.get(species, 0)) + 1
 	return {"ok":true, "reason":("A salmon! " if species == "salmon" else "Caught a river fish. ") + "+1 " + species.replace("_", " ")}
+
+const PICKUP_RADIUS: float = 1.4
+## Drops the player's whole stack of one item on the ground in front of them, for anyone
+## (including other players) to walk up and collect -- there is no per-item quantity
+## picker, matching how discard/pin already operate on a whole stack at a time.
+func drop_item(peer: int, item: String, actor: Vector3, facing: float, now: float) -> Dictionary:
+	var p: Dictionary = profile(peer)
+	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait a moment.")
+	var amount: int = int(p.inventory.get(item, 0))
+	if amount <= 0: return Build.fail("You do not have that item.")
+	if not data.has("dropped"): data["dropped"] = {}
+	if data.dropped.size() >= 3000: return Build.fail("Too many dropped items nearby. Wait for some to be collected.")
+	p.inventory[item] = 0
+	if p.get("equipped", "hand") == item: p.equipped = "hand"
+	var toss: Vector3 = actor + Basis(Vector3.UP, facing) * Vector3(0, 0, -1.1)
+	var id: String = uid()
+	data.dropped[id] = {"id":id, "p":[toss.x, toss.y, toss.z], "item":item, "amount":amount}
+	cooldowns[peer] = now + 0.3
+	return {"ok":true, "reason":"Dropped " + str(amount) + " " + item.replace("_", " ") + "."}
+
+## Automatic, Minecraft-style walk-over pickup -- runs on the authority every physics
+## frame; returns the set of peers whose inventory changed so the caller knows who to
+## re-publish and broadcast state to.
+func tick_drops(player_positions: Dictionary) -> Array:
+	if not data.has("dropped") or data.dropped.is_empty(): return []
+	var changed: Array = []
+	for id: String in data.dropped.keys():
+		var record: Dictionary = data.dropped.get(id, {})
+		if record.is_empty(): continue
+		var p: Vector3 = Vector3(record.p[0], record.p[1], record.p[2])
+		for peer: int in player_positions:
+			if p.distance_to(player_positions[peer]) > PICKUP_RADIUS: continue
+			var pr: Dictionary = profile(peer)
+			if pr.is_empty(): continue
+			pr.inventory[record.item] = int(pr.inventory.get(record.item, 0)) + int(record.amount)
+			data.dropped.erase(id)
+			changed.append({"peer":peer, "item":record.item, "amount":record.amount})
+			break
+	return changed
 
 func equip(peer: int,tool: String) -> Dictionary:
 	var p: Dictionary=profile(peer)

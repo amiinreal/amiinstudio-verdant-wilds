@@ -54,7 +54,8 @@ func _ready() -> void:
 			hotbar_slots.clear()
 			for slot: String in saved_slots: hotbar_slots.append(slot)
 	_root=Control.new(); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(_root)
-	_scrim=ColorRect.new(); _scrim.color=Color(0.02,0.045,0.045,0.6); _scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _scrim.mouse_filter=Control.MOUSE_FILTER_IGNORE; _scrim.hide(); _root.add_child(_scrim)
+	_scrim=ColorRect.new(); _scrim.color=Color(0.02,0.045,0.045,0.6); _scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _scrim.mouse_filter=Control.MOUSE_FILTER_STOP; _scrim.hide(); _root.add_child(_scrim)
+	_scrim.set_drag_forwarding(func(_pos: Vector2) -> Variant: return null,func(_pos: Vector2,data: Variant) -> bool: return data is Dictionary and data.has("item"),func(_pos: Vector2,data: Variant) -> void: _drop_into_world(data))
 	_panel=PanelContainer.new(); _panel.add_theme_stylebox_override("panel",style(Color(0.035,0.095,0.11,0.95),26)); _root.add_child(_panel)
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER); _panel.offset_left=-400; _panel.offset_right=400; _panel.offset_top=-300; _panel.offset_bottom=300
 	_body=VBoxContainer.new(); _body.add_theme_constant_override("separation",12); _panel.add_child(_body)
@@ -383,11 +384,53 @@ func _slot_tile(item: String, count: int, selected: bool, slot_number: int) -> P
 		var number: Label=label(str(slot_number),10,Color("e6dcc3")); number.position=Vector2(3,1); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; tile.add_child(number)
 	return tile
 
+func _drag_preview(item: String) -> TextureRect:
+	var preview: TextureRect=TextureRect.new(); preview.custom_minimum_size=Vector2(40,40); preview.texture=Items.icon(item)
+	preview.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; preview.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; preview.modulate.a=0.85
+	return preview
+
+## Dragged from a hotbar slot or a storage tile onto a specific hotbar slot: places the
+## item there, swapping with whatever was already in that slot (from another hotbar slot)
+## or simply displacing it back to storage (from storage).
+func _drop_on_hotbar_slot(target: int, data: Dictionary) -> void:
+	var item: String=str(data.get("item",""))
+	if item.is_empty(): return
+	if str(data.get("source",""))=="hotbar":
+		var from_slot: int=int(data.get("slot",-1))
+		if from_slot==-1 or from_slot==target: return
+		var temp: String=hotbar_slots[target]
+		hotbar_slots[target]=item; hotbar_slots[from_slot]=temp
+	else:
+		var existing: int=hotbar_slots.find(item)
+		if existing!=-1 and existing!=target: hotbar_slots[existing]=""
+		hotbar_slots[target]=item
+	_refresh_hotbar_slots(); _save_hotbar_prefs(); open_page("Inventory")
+
+## Dragged onto the storage grid: only meaningful from the hotbar (unpins that slot).
+func _drop_on_storage(data: Dictionary) -> void:
+	if str(data.get("source",""))=="hotbar":
+		var slot: int=int(data.get("slot",-1))
+		if slot>=0: hotbar_slots[slot]=""
+		_refresh_hotbar_slots(); _save_hotbar_prefs()
+	open_page("Inventory")
+
+## Dragged out of the panel entirely (dropped on the dimmed background): tosses the whole
+## stack on the ground for anyone -- including other players -- to walk over and collect.
+func _drop_into_world(data: Dictionary) -> void:
+	var item: String=str(data.get("item",""))
+	if item.is_empty() or session==null: return
+	if str(data.get("source",""))=="hotbar":
+		var slot: int=int(data.get("slot",-1))
+		if slot>=0: hotbar_slots[slot]=""
+		_refresh_hotbar_slots(); _save_hotbar_prefs()
+	session.drop_stack(item)
+	open_page("Inventory")
+
 func _inventory(content: VBoxContainer) -> void:
 	_inventory_hash = hash([session.local_profile.get("inventory", {}), int(session.local_profile.get("fullness", 50)), int(session.local_profile.get("health", 100)), str(session.local_profile.get("equipped", "hand"))])
 	var equipment: VBoxContainer=card(content)
 	equipment.add_child(label("EQUIPPED  ·  "+str(session.local_profile.get("equipped","hand")).capitalize(),14,Color("8fa38f")))
-	equipment.add_child(label("Click a hotbar slot below (or press 1-8) to equip it · E / I close · H show / hide hotbar",12,Color("8fa38f")))
+	equipment.add_child(label("Click a hotbar slot below (or press 1-8) to equip it · drag items between hotbar and storage, or out of this panel to drop them on the ground · E / I close",12,Color("8fa38f")))
 	var visibility: CheckButton = CheckButton.new()
 	visibility.text = "Show hotbar while playing"
 	visibility.button_pressed = hotbar_enabled
@@ -408,11 +451,19 @@ func _inventory(content: VBoxContainer) -> void:
 			wrapper.icon=Items.icon(item); wrapper.expand_icon=true; wrapper.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; wrapper.add_theme_constant_override("icon_max_width",40)
 			wrapper.tooltip_text=item.capitalize()+" ×"+str(inv.get(item,0))
 		var slot_i: int=i
+		var slot_item: String=item
 		wrapper.pressed.connect(func() -> void:
 			selected_slot=slot_i
-			if not item.is_empty(): inventory_item=item
-			if session!=null: session.equip(item if item in TOOL_IDS else "hand")
+			if not slot_item.is_empty(): inventory_item=slot_item
+			if session!=null: session.equip(slot_item if slot_item in TOOL_IDS else "hand")
 			open_page("Inventory"))
+		wrapper.set_drag_forwarding(
+			func(_pos: Vector2) -> Variant:
+				if slot_item.is_empty(): return null
+				wrapper.set_drag_preview(_drag_preview(slot_item))
+				return {"item":slot_item,"source":"hotbar","slot":slot_i},
+			func(_pos: Vector2,data: Variant) -> bool: return data is Dictionary and data.has("item"),
+			func(_pos: Vector2,data: Variant) -> void: _drop_on_hotbar_slot(slot_i,data))
 		hotbar_row.add_child(wrapper)
 		var number: Label=label(str(i+1),10,Color("e6dcc3")); number.position=Vector2(4,2); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; wrapper.add_child(number)
 		if not item.is_empty() and int(inv.get(item,0))>1:
@@ -422,7 +473,8 @@ func _inventory(content: VBoxContainer) -> void:
 	var storage_card: VBoxContainer=card(content)
 	storage_card.add_child(label("STORAGE  ·  unlimited",11,Color("8fa38f")))
 	var categories: HBoxContainer=HBoxContainer.new(); categories.add_theme_constant_override("separation",8); storage_card.add_child(categories)
-	var grid: GridContainer=GridContainer.new(); grid.columns=8; grid.add_theme_constant_override("h_separation",6); grid.add_theme_constant_override("v_separation",6); storage_card.add_child(grid)
+	var grid: GridContainer=GridContainer.new(); grid.columns=8; grid.add_theme_constant_override("h_separation",6); grid.add_theme_constant_override("v_separation",6); grid.mouse_filter=Control.MOUSE_FILTER_STOP; storage_card.add_child(grid)
+	grid.set_drag_forwarding(func(_pos: Vector2) -> Variant: return null,func(_pos: Vector2,data: Variant) -> bool: return data is Dictionary and data.has("item"),func(_pos: Vector2,data: Variant) -> void: _drop_on_storage(data))
 	var info: Label=label("Select a slot to inspect it.",14,Color("adc4b5"))
 	var selected_image: TextureRect=TextureRect.new(); selected_image.custom_minimum_size=Vector2(88,88); selected_image.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; selected_image.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var populate: Callable=func(category: String) -> void:
@@ -442,6 +494,12 @@ func _inventory(content: VBoxContainer) -> void:
 			grid.add_child(tile)
 			var select: Button=Button.new(); select.flat=true; select.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); select.focus_mode=Control.FOCUS_NONE
 			select.pressed.connect(func() -> void: inventory_item = item; open_page("Inventory")); tile.add_child(select)
+			select.set_drag_forwarding(
+				func(_pos: Vector2) -> Variant:
+					select.set_drag_preview(_drag_preview(item))
+					return {"item":item,"source":"storage","slot":-1},
+				func(_pos: Vector2,data: Variant) -> bool: return data is Dictionary and data.has("item"),
+				func(_pos: Vector2,data: Variant) -> void: _drop_on_storage(data))
 		if grid.get_child_count() == 0: grid.add_child(label("Nothing in storage yet.", 15))
 	for category: String in ["All","Resources","Tools","Crafting","Food","Farming"]:
 		button(category,func() -> void: populate.call(category),categories)

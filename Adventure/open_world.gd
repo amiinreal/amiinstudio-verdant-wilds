@@ -9,6 +9,7 @@ const WIND := preload("res://Adventure/wind.gdshader")
 var meadow: Node3D
 var wildlife: Node3D
 var farmland_view: Node3D
+var drop_view: Node3D
 var cooking_stations: Array[Vector3] = []
 var terrain_edits: Dictionary={}
 var extra_resource_nodes: Dictionary={}
@@ -103,6 +104,10 @@ func build(new_seed: int,landscape_version: int=2) -> void:
 	farmland.set_script(preload("res://Adventure/farming/farmland_view.gd"))
 	_root.add_child(farmland)
 	farmland_view = farmland
+	var drops: Node3D = Node3D.new()
+	drops.set_script(preload("res://Adventure/drops/drop_view.gd"))
+	_root.add_child(drops)
+	drop_view = drops
 	preload("res://Adventure/loading_screen.gd").show_progress(95,"Drawing the map…")
 	_map_image()
 	show()
@@ -521,6 +526,8 @@ func apply_delta(delta: Dictionary) -> void:
 		wildlife.apply_tamed(delta.get("tamed", {}))
 	if is_instance_valid(farmland_view):
 		farmland_view.apply_state(delta.get("farmland", {}), _time)
+	if is_instance_valid(drop_view):
+		drop_view.apply_state(delta.get("dropped", {}))
 	apply_terrain_edits(delta.get("terrain_edits",{}))
 	changed_resources=delta.get("resources",{}).duplicate()
 	structure_records=delta.get("structures",[]).duplicate(true)
