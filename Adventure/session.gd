@@ -840,8 +840,11 @@ func farm() -> void:
 		if is_authority(): _farm(1, "fill_bucket", "", body.position)
 		else: _farm_request.rpc_id(1, "fill_bucket", "", body.position)
 		return
-	var plot_id: String = world.farmland_view.nearest(aim) if is_instance_valid(world.farmland_view) else ""
-	if plot_id.is_empty() and is_instance_valid(world.farmland_view): plot_id = world.farmland_view.nearest(body.position)
+	# A tight radius here matters: plots can sit as close as 1 m edge-to-edge, so a loose
+	# "nearest within reach" search would keep grabbing a neighboring plot instead of the
+	# bare ground actually under the crosshair.
+	var plot_id: String = world.farmland_view.nearest(aim, 0.75) if is_instance_valid(world.farmland_view) else ""
+	if plot_id.is_empty() and is_instance_valid(world.farmland_view): plot_id = world.farmland_view.nearest(body.position, 0.75)
 	var mode: String
 	if not plot_id.is_empty():
 		var record: Dictionary = world.farmland_view.plots.get(plot_id, {})
@@ -861,7 +864,12 @@ func farm() -> void:
 		gather(); return
 	else:
 		mode = "till"
-	var target: Vector3 = aim if mode == "till" else body.position
+	# Snapped to a 1 m grid so repeated tilling lines up edge-to-edge, the way Minecraft's
+	# block grid does, instead of landing at wherever the player happened to be facing.
+	var target: Vector3 = body.position
+	if mode == "till":
+		target = Vector3(roundf(aim.x), 0, roundf(aim.z))
+		target.y = world.height_at(Vector2(target.x, target.z))
 	if is_authority(): _farm(1, mode, plot_id, target)
 	else: _farm_request.rpc_id(1, mode, plot_id, target)
 

@@ -447,7 +447,9 @@ func farm_action(peer: int, mode: String, plot_id: String, p: Vector3, actor: Ve
 	if mode == "till":
 		if actor.distance_to(p) > 3.5: return Build.fail("Move closer to till this ground.")
 		for plot: Dictionary in data.farmland.values():
-			if Vector3(plot.p[0], plot.p[1], plot.p[2]).distance_to(p) < 1.1: return Build.fail("Soil is already tilled here.")
+			# Plots are meant to sit edge-to-edge on a 1 m grid, like Minecraft farmland --
+			# only reject an exact (or near-exact) overlap, not a legitimate neighbor.
+			if Vector3(plot.p[0], plot.p[1], plot.p[2]).distance_to(p) < 0.85: return Build.fail("Soil is already tilled here.")
 		if data.farmland.size() >= 4000: return Build.fail("This world's farmland budget has been reached.")
 		if not preload("res://Adventure/animals/habitat.gd").clear_ground(world, Vector2(p.x, p.z), 0.6):
 			return Build.fail("This ground will not hold a farm plot. Try flatter, clearer soil away from water.")

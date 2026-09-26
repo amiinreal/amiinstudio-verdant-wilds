@@ -189,6 +189,22 @@ func run() -> void:
 			var new_p: Vector3 = Vector3(store.data.farmland[new_id].p[0], store.data.farmland[new_id].p[1], store.data.farmland[new_id].p[2])
 			check(Vector2(new_p.x, new_p.z).distance_to(Vector2(actor.position.x, actor.position.z)) > 1.0, "the new plot lands ahead of the player, not exactly underfoot: " + str(new_p))
 
+			# Regression test: tilling a second plot exactly 1 m beside the first one (edge to
+			# edge, like Minecraft farmland) must succeed, and the crosshair must then resolve
+			# each plot to *only* the tile actually under it -- not "whichever is nearby".
+			t = maxf(t, session.clock_time) + 1.0
+			var neighbor_p: Vector3 = new_p + Vector3(1, 0, 0)
+			neighbor_p.y = world.height_at(Vector2(neighbor_p.x, neighbor_p.z))
+			var neighbor_till: Dictionary = store.farm_action(1, "till", "", neighbor_p, neighbor_p, world, t); t += 1.0
+			check(neighbor_till.ok, "tilling a plot exactly 1 m beside an existing one succeeds: " + str(neighbor_till.reason))
+			if neighbor_till.ok:
+				world.apply_delta(store.public_delta())
+				var neighbor_id: String = ""
+				for pid: String in store.data.farmland:
+					if pid != new_id and pid != plot_a and pid != plot_b and pid != throwaway_plot: neighbor_id = pid
+				check(world.farmland_view.nearest(new_p, 0.75) == new_id, "the crosshair on plot A resolves to plot A, not its neighbor")
+				check(world.farmland_view.nearest(neighbor_p, 0.75) == neighbor_id, "the crosshair on the neighbor resolves to the neighbor, not plot A")
+
 	# Pinning an item to the hotbar must not also list it in storage -- same stack, shown once.
 	profile.inventory["planks"] = 4
 	game.hud.pin_to_hotbar("planks")
