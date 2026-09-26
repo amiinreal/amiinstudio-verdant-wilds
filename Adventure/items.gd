@@ -9,7 +9,9 @@ const TOOLS: Dictionary={
 	"water_bucket":{"name":"Water bucket","resource":"","model":"res://Fantasy Props Megakit/Exports/FBX/Bucket_Wooden_1.fbx","grip":Vector3(0,-0.25,0),"rotation":Vector3.ZERO},
 	"fishing_rod":{"name":"Fishing rod","resource":"","model":"res://FarmingFishing/Models/fishing_rod.glb","grip":Vector3(0,-0.3,0.1),"rotation":Vector3.ZERO},
 	"wheat_seeds":{"name":"Wheat seeds","resource":"","model":"res://FarmingFishing/Models/wheat_seeds.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
-	"carrot_seeds":{"name":"Carrot seeds","resource":"","model":"res://FarmingFishing/Models/carrot_seeds.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO}
+	"carrot_seeds":{"name":"Carrot seeds","resource":"","model":"res://FarmingFishing/Models/carrot_seeds.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO},
+	"bone":{"name":"Bone","resource":"","model":"","grip":Vector3.ZERO,"rotation":Vector3.ZERO},
+	"meat":{"name":"Raw meat","resource":"","model":"res://Adventure/cooking/raw_meat.glb","grip":Vector3(0,-0.15,0),"rotation":Vector3.ZERO}
 }
 static var RECIPES: Dictionary={}
 const FOOD_MODELS: Dictionary = {

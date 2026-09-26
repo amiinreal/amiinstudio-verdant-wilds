@@ -525,7 +525,7 @@ func apply_delta(delta: Dictionary) -> void:
 	changed_resources=delta.get("resources",{}).duplicate()
 	structure_records=delta.get("structures",[]).duplicate(true)
 	grass_clearings=delta.get("grass_clearings",{}).duplicate(true)
-	var signature: String=str(structure_records.hash())+str(grass_clearings.hash())
+	var signature: String=str(structure_records.hash())+str(grass_clearings.hash())+str(delta.get("farmland",{}).keys().hash())
 	if signature!=_structure_signature:
 		_structure_signature=signature; _update_grass_mask()
 	for id: String in changed_resources:
@@ -676,6 +676,10 @@ func _update_grass_mask() -> void:
 		_mask_box(image,AABB(Vector3(float(clearing[0])-3,0,float(clearing[1])-3),Vector3(6,1,6)))
 	for station: Vector3 in cooking_stations:
 		_mask_box(image, AABB(station - Vector3(1.1, 0, 1.1), Vector3(2.2, 1, 2.2)))
+	if is_instance_valid(farmland_view):
+		for record: Dictionary in farmland_view.plots.values():
+			var p: Vector3=Vector3(record.p[0],record.p[1],record.p[2])
+			_mask_box(image, AABB(p - Vector3(0.6, 0, 0.6), Vector3(1.2, 1, 1.2)))
 	grass_mask_image=image
 	grass_mask.update(image)
 

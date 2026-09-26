@@ -336,9 +336,11 @@ func hit_animal(peer: int, animal: Node3D, now: float) -> Dictionary:
 	elif hp == 0: result_text = ("Rare " if animal.get("rare") else "") + animal.species.capitalize() + " defeated."
 	return {"ok":true, "reason":result_text}
 
-## Cows are always a free, affectionate pet. Cats and dogs are wild until fed a bone
-## (preferred) or meat, which tames them for life; only after that does petting them
-## do anything -- a wild animal has no bond yet, so it gets no heart popup.
+## Cows are always a free, affectionate pet. Cats and dogs are wild until fed a bone or
+## meat -- and taming only happens when the player has deliberately equipped that food
+## (same as every other equip-gated action), never just because they happen to be
+## carrying some. A plain pet (nothing equipped, or a tool equipped) never tames and
+## never causes following.
 func interact_animal(peer: int, animal: Node3D) -> Dictionary:
 	var p: Dictionary = profile(peer)
 	if p.is_empty(): return Build.fail("Not signed in.")
@@ -346,9 +348,9 @@ func interact_animal(peer: int, animal: Node3D) -> Dictionary:
 	var already_tamed: bool = data.tamed.has(animal.animal_id)
 	if animal.species == "cow" or already_tamed:
 		return {"ok":true, "reason":("You pet your " if already_tamed else "You pet the ") + animal.species + ".", "affection":true}
-	var feed_item: String = "bone" if int(p.inventory.get("bone", 0)) > 0 else ("meat" if int(p.inventory.get("meat", 0)) > 0 else "")
-	if feed_item.is_empty():
-		return {"ok":true, "reason":"This " + animal.species + " is wild. Feed it a bone or meat (hold one, then press T) to tame it.", "affection":false}
+	var feed_item: String = p.get("equipped", "")
+	if feed_item not in ["bone", "meat"] or int(p.inventory.get(feed_item, 0)) < 1:
+		return {"ok":true, "reason":"This " + animal.species + " is wild. Equip a bone or meat, then press T to tame it.", "affection":false}
 	p.inventory[feed_item] = int(p.inventory[feed_item]) - 1
 	data.tamed[animal.animal_id] = p.id
 	return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true, "affection":true}

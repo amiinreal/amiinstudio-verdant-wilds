@@ -7,7 +7,7 @@ signal build_requested(index: int)
 const Items = preload("res://Adventure/items.gd")
 const Branding = preload("res://Adventure/branding.gd")
 const DEFAULT_HOTBAR: Array[String]=["axe","pickaxe","hammer","wood","stone","fiber","planks","rope"]
-const TOOL_IDS: Array[String]=["axe","pickaxe","hammer","hand","bucket","water_bucket","fishing_rod","wheat_seeds","carrot_seeds"]
+const TOOL_IDS: Array[String]=["axe","pickaxe","hammer","hand","bucket","water_bucket","fishing_rod","wheat_seeds","carrot_seeds","bone","meat"]
 ## Which item sits in each of the 8 hotbar slots (never bigger than 8; "" is empty). Pinned
 ## and unpinned from the Inventory page, persisted alongside the hotbar-visibility preference.
 var hotbar_slots: Array[String]=DEFAULT_HOTBAR.duplicate()
@@ -456,8 +456,8 @@ func _inventory(content: VBoxContainer) -> void:
 			"cooked_fish":"Eat one to restore 35 food and 15 health.",
 			"bread":"Eat one to restore 30 food and 10 health.",
 			"carrot":"Eat raw for 15 food, or plant with F on tilled soil.",
-			"meat":"Raw meat · cook with 1 wood at a cooking fire, or feed (T) to a cat or dog to tame it.",
-			"bone":"Feed (T) to a cat or dog to tame it.",
+			"meat":"Raw meat · cook with 1 wood at a cooking fire, or equip and press T on a cat or dog to tame it.",
+			"bone":"Equip, then press T on a cat or dog to tame it.",
 			"river_fish":"Raw fish · cook at a cooking fire before eating.",
 			"salmon":"Raw fish · cook at a cooking fire before eating.",
 			"wheat":"Bake into bread, or plant more with leftover seeds.",

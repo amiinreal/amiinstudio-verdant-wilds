@@ -130,6 +130,10 @@ func run() -> void:
 	session.pet_animal()
 	check(not session.store.data.get("tamed", {}).has("dog_0"), "petting alone does not tame")
 	session.store.profile(1).inventory.bone = 1
+	session.store.equip(1, "axe")
+	var unequipped_bone: Dictionary = session.store.interact_animal(1, dog)
+	check(not unequipped_bone.get("tamed", false) and int(session.store.profile(1).inventory.get("bone", 0)) == 1, "owning a bone without equipping it does not auto-tame")
+	check(session.store.equip(1, "bone").ok, "bone can be equipped")
 	session.pet_animal()
 	check(session.store.data.tamed.get("dog_0") == "host" and int(session.local_profile.inventory.get("bone", 0)) == 0, "feeding a bone tames the dog and consumes it")
 	check(dog.tamed and dog.owner_id == "host", "tamed state replicates onto the live animal node")

@@ -60,6 +60,12 @@ func run() -> void:
 		if pos.distance_to(spots[1]) < 0.5: plot_b = id
 	check(not plot_a.is_empty() and not plot_b.is_empty() and plot_a != plot_b, "plot ids resolved")
 
+	# Grass must not be left covering a tilled plot's soil model (regression: the grass
+	# mask used to ignore farmland entirely, so the model rendered but was hidden).
+	world.apply_delta(store.public_delta())
+	var pixel_a: Vector2i = Vector2i(floori(spots[0].x + 512), floori(spots[0].z + 512))
+	check(world.grass_mask_image.get_pixelv(pixel_a).r > 0.5, "grass is cleared around a tilled plot")
+
 	# Plant.
 	var profile: Dictionary = store.profile(1)
 	profile.inventory["carrot_seeds"] = 3
