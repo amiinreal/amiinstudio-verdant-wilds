@@ -98,4 +98,55 @@ if (args.Contains("--live-flow"))
     }
 }
 
+// Exercises the real Install() path twice against a throwaway local server, with no
+// network access needed, and checks that only the newly activated version survives on
+// disk -- old installs must not pile up forever in %LOCALAPPDATA%\AmiinStudio.
+{
+    byte[] MakeZip(string entryName, string contents)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        {
+            var entry = zip.CreateEntry(entryName);
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write(contents);
+        }
+        return ms.ToArray();
+    }
+    var zipA = MakeZip("Game.exe", "version-a");
+    var zipB = MakeZip("Game.exe", "version-b");
+    var listener = new System.Net.HttpListener();
+    var port = 34567;
+    listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+    listener.Start();
+    var serverTask = Task.Run(async () =>
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            var ctx = await listener.GetContextAsync();
+            var body = ctx.Request.Url!.AbsolutePath.EndsWith("a.zip") ? zipA : zipB;
+            ctx.Response.ContentLength64 = body.Length;
+            await ctx.Response.OutputStream.WriteAsync(body);
+            ctx.Response.OutputStream.Close();
+        }
+    });
+    var slot = "prune-test-" + Guid.NewGuid().ToString("N")[..8];
+    try
+    {
+        var packageA = new Package("1.0.0", $"http://127.0.0.1:{port}/a.zip", Convert.ToHexString(SHA256.HashData(zipA)).ToLowerInvariant(), zipA.Length, "Game.exe");
+        var packageB = new Package("1.0.1", $"http://127.0.0.1:{port}/b.zip", Convert.ToHexString(SHA256.HashData(zipB)).ToLowerInvariant(), zipB.Length, "Game.exe");
+        var reporter = new Progress<(double, string)>(_ => { });
+        await Updates.Install(packageA, "game", "prune-channel", true, reporter, slot);
+        await Updates.Install(packageB, "game", "prune-channel", true, reporter, slot);
+        var folder = Path.Combine(Updates.Root, "game", "prune-channel", slot);
+        var remaining = Directory.GetDirectories(folder).Select(Path.GetFileName).ToList();
+        Check(remaining.Count == 1 && remaining[0]!.StartsWith("1.0.1-"), "only the newest version survives on disk, got: " + string.Join(",", remaining));
+    }
+    finally
+    {
+        listener.Stop();
+        try { Directory.Delete(Path.Combine(Updates.Root, "game", "prune-channel"), true); } catch { }
+    }
+}
+
 Console.WriteLine("UPDATE_CHECKS_COMPLETE");

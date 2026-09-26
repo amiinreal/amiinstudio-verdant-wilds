@@ -105,6 +105,7 @@ public static class Updates
             if (!Directory.Exists(destination)) Directory.Move(stage,destination);
             else Directory.Delete(stage,true);
             AtomicText(Path.Combine(folder,"active.txt"),Path.GetFileName(destination));
+            PruneOldVersions(folder, destination);
             progress.Report((100,"Ready"));
             return SafeEntry(destination,package.entry);
         }
@@ -112,6 +113,19 @@ public static class Updates
         {
             if (File.Exists(archive)) File.Delete(archive);
             if (Directory.Exists(stage)) Directory.Delete(stage,true);
+        }
+    }
+    // Keep only the newly activated version on disk -- older installs (game or launcher)
+    // are no longer reachable via active.txt, so there is nothing to gain from hoarding
+    // them. A folder that is still open (e.g. the launcher updating itself while its own
+    // old .exe is still the running process) simply fails to delete and is retried on the
+    // next install; that failure must never take down the install that just succeeded.
+    private static void PruneOldVersions(string folder, string keep)
+    {
+        foreach (var dir in Directory.GetDirectories(folder))
+        {
+            if (string.Equals(dir, keep, StringComparison.OrdinalIgnoreCase)) continue;
+            try { Directory.Delete(dir, true); } catch { }
         }
     }
     public static string SafeEntry(string root, string name)
