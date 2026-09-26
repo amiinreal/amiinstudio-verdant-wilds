@@ -8,6 +8,7 @@ const Streamer := preload("res://Adventure/world_streamer.gd")
 const WIND := preload("res://Adventure/wind.gdshader")
 var meadow: Node3D
 var wildlife: Node3D
+var farmland_view: Node3D
 var cooking_stations: Array[Vector3] = []
 var terrain_edits: Dictionary={}
 var extra_resource_nodes: Dictionary={}
@@ -98,6 +99,10 @@ func build(new_seed: int,landscape_version: int=2) -> void:
 	_root.add_child(animals)
 	animals.setup(self)
 	wildlife = animals
+	var farmland: Node3D = Node3D.new()
+	farmland.set_script(preload("res://Adventure/farming/farmland_view.gd"))
+	_root.add_child(farmland)
+	farmland_view = farmland
 	preload("res://Adventure/loading_screen.gd").show_progress(95,"Drawing the map…")
 	_map_image()
 	show()
@@ -384,6 +389,16 @@ func _static_meshes(node: Node3D) -> void:
 func _vegetation() -> void:
 	Ecology.new().generate(self)
 
+## True if a point (or its immediate surroundings) touches a river, lake or the sea --
+## used for filling a bucket and for casting a fishing line.
+func near_water(p: Vector3, radius: float = 1.8) -> bool:
+	var here: Vector2 = Vector2(p.x, p.z)
+	if geography.water_height(here) > height_at(here) - 0.3: return true
+	for i in range(8):
+		var sample: Vector2 = here + Vector2.from_angle(i * PI / 4) * radius
+		if geography.water_height(sample) > height_at(sample) - 0.3: return true
+	return false
+
 func resource(id: String,kind: String,p: Vector2,charges: int,amount: int) -> void:
 	resources[id]={"kind":kind,"p":Vector3(p.x,height_at(p),p.y),"charges":charges,"amount":amount}
 
@@ -504,6 +519,8 @@ func apply_delta(delta: Dictionary) -> void:
 	if is_instance_valid(wildlife):
 		wildlife.apply_state(delta.get("animals", {}))
 		wildlife.apply_tamed(delta.get("tamed", {}))
+	if is_instance_valid(farmland_view):
+		farmland_view.apply_state(delta.get("farmland", {}), _time)
 	apply_terrain_edits(delta.get("terrain_edits",{}))
 	changed_resources=delta.get("resources",{}).duplicate()
 	structure_records=delta.get("structures",[]).duplicate(true)

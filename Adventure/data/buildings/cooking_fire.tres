@@ -1,0 +1,17 @@
+[gd_resource type="Resource" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Adventure/building_piece_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://Adventure/cooking/cooking_fire.glb" id="2"]
+[ext_resource type="Texture2D" path="res://Adventure/cooking/cooking_fire.svg" id="3"]
+[resource]
+script = ExtResource("1")
+id = "cooking_fire"
+display_name = "Cooking fire"
+category = "Crafting"
+subcategory = "Cooking"
+scene = ExtResource("2")
+thumbnail = ExtResource("3")
+resource_cost = {"wood":8,"stone":8}
+snap_type = "decoration"
+footprint = Vector2i(1,1)
+placement_rules = {"free":true}
+

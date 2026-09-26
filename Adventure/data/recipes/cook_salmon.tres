@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://Adventure/recipe_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+recipe_id = "cook_salmon"
+display_name = "Grilled salmon"
+ingredients = {"salmon":1,"wood":1}
+result = "cooked_fish"
+quantity = 2
+craft_time = 4.0
+required_station = "cooking_fire"
+animation_type = "CraftWorkbench"
+effect_type = "wood"

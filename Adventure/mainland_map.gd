@@ -27,5 +27,11 @@ func _draw() -> void:
 	for id: int in session.players:
 		var p: Vector3=session.players[id].position
 		draw_circle(point(Vector2(p.x,p.z)),4,Color("ffe393") if id==session.local_id() else Color("79e0ec"))
+	for position: Vector3 in session.world.cooking_stations:
+		draw_circle(point(Vector2(position.x, position.z)), 3.0, Color("ff9c54"))
+	if is_instance_valid(session.world.wildlife):
+		for animal: Node3D in session.world.wildlife.get_children():
+			if animal.health > 0: draw_circle(point(Vector2(animal.position.x, animal.position.z)), 2.0, Color("ade1c2"))
+	draw_string(ThemeDB.fallback_font, Vector2(20, 452), "Orange: cooking fires   Green: animals", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("fff1ce"))
 	for i in range(Geo.NAMES.size()):
 		draw_string(ThemeDB.fallback_font,point(Geo.CENTERS[i])+Vector2(5,-7),Geo.NAMES[i].get_slice(" ",0),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("fff1ce"))

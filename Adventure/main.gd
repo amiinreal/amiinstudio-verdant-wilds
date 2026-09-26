@@ -90,6 +90,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if actor!=null: session.flatten_land(builder.candidate if builder.enabled and builder.ghost!=null and builder.ghost.visible else actor.position)
 		elif key==KEY_G or key==KEY_Q: session.gather()
 		elif key==KEY_T and not builder.enabled: session.pet_animal()
+		elif key==KEY_F and not builder.enabled: session.farm()
 		elif key==KEY_SPACE: _jump=true
 		elif key==KEY_DELETE and builder.enabled and session.has_method("remove_nearest"): session.remove_nearest()
 

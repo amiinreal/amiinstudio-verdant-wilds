@@ -1,5 +1,5 @@
 extends RefCounted
-const VERSION: int=3
+const VERSION: int=4
 const CENTERS: Array[Vector2] = [Vector2(-95,155),Vector2(-225,-180),Vector2(-53,120),Vector2(170,-280),Vector2(-270,-300),Vector2(160,160),Vector2(40,400)]
 const NAMES: Array[String] = ["Aldermead Valley", "Whisperwood Forest", "Mirrorwater Basin", "Greycrown Mountains", "Elderwood Deep Forest", "Sunfold Hills", "Southshore Coast"]
 static func fresh_state(seed_value: int) -> Dictionary:

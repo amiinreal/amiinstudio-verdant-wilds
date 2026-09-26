@@ -387,6 +387,7 @@ func _physics_process(delta: float) -> void:
 		for peer_id: int in players:
 			if _owner_profile.has(peer_id): owners[_owner_profile[peer_id]] = players[peer_id].position
 		world.wildlife.tick(clock_time, delta, owners)
+	if is_authority(): store.tick_farms(delta, clock_time)
 	state["day_time"]=fposmod(float(state.get("day_time",0.32))+delta/1200.0,1.0)
 	_stream_timer+=delta
 	if _stream_timer>0.4 and local_player()!=null:
@@ -419,6 +420,7 @@ func _physics_process(delta: float) -> void:
 		if _profile_timer>=2:
 			_profile_timer=0
 			for id: int in players: _publish_profile(id)
+			_send_state()
 		if _save_timer>=30:
 			_save_timer=0; _save()
 		_snapshot_time += delta
@@ -714,6 +716,9 @@ func _tick_actions() -> void:
 			var animal: Node3D = world.wildlife.find_animal(job.animal)
 			if not _animal_in_reach(id, animal): continue
 			_economy_result(id, store.hit_animal(id, animal, clock_time))
+		elif job.type=="fish":
+			if store.profile(id).get("equipped", "hand") != "fishing_rod": continue
+			_economy_result(id, store.catch_fish(id, clock_time))
 		elif job.type=="attack_player":
 			if store.profile(id).get("equipped", "hand") != job.tool or nearest_player(id) != job.target: continue
 			var result: Dictionary = store.hit_player(id, job.target, clock_time)
@@ -807,6 +812,60 @@ func _show_affection(animal_id: String) -> void:
 	if not is_instance_valid(world) or not is_instance_valid(world.wildlife): return
 	var animal: Node3D = world.wildlife.find_animal(animal_id)
 	if animal != null: animal.show_affection()
+
+## One context-sensitive key: fish or fill a bucket at the water's edge, or till / plant /
+## water / harvest a farm plot, whichever the player is standing near with what they hold.
+func farm() -> void:
+	var id: int = local_id()
+	if not players.has(id): return
+	var body: CharacterBody3D = players[id]
+	var equipped: String = str(local_profile.get("equipped", "hand"))
+	var near_water: bool = world.near_water(body.position)
+	if equipped == "fishing_rod" and near_water:
+		if is_authority(): _fish(1)
+		else: _fish_request.rpc_id(1)
+		return
+	if equipped == "bucket" and near_water:
+		if is_authority(): _farm(1, "fill_bucket", "", body.position)
+		else: _farm_request.rpc_id(1, "fill_bucket", "", body.position)
+		return
+	var plot_id: String = world.farmland_view.nearest(body.position) if is_instance_valid(world.farmland_view) else ""
+	var mode: String
+	if not plot_id.is_empty():
+		var record: Dictionary = world.farmland_view.plots.get(plot_id, {})
+		var crop: String = str(record.get("crop", ""))
+		if crop.is_empty():
+			mode = "water" if equipped == "water_bucket" else "plant"
+		elif float(record.get("progress", 0.0)) >= 1.0:
+			mode = "harvest"
+		elif equipped == "water_bucket":
+			mode = "water"
+		else:
+			message.emit("Still growing…"); return
+	else:
+		mode = "till"
+	if is_authority(): _farm(1, mode, plot_id, body.position)
+	else: _farm_request.rpc_id(1, mode, plot_id, body.position)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _farm_request(mode: String, plot_id: String, p: Vector3) -> void:
+	if is_authority(): _farm(multiplayer.get_remote_sender_id(), mode, plot_id, p)
+
+func _farm(id: int, mode: String, plot_id: String, p: Vector3) -> void:
+	if not running or not players.has(id) or players[id].swimming or not p.is_finite(): return
+	_economy_result(id, store.farm_action(id, mode, plot_id, p, players[id].position, world, clock_time))
+
+@rpc("any_peer", "call_remote", "reliable")
+func _fish_request() -> void:
+	if is_authority(): _fish(multiplayer.get_remote_sender_id())
+
+func _fish(id: int) -> void:
+	if not running or not players.has(id) or _actions.has(id) or players[id].swimming: return
+	if store.profile(id).get("equipped", "hand") != "fishing_rod" or not world.near_water(players[id].position): return
+	if clock_time < float(store.cooldowns.get(id, 0)): return
+	_actions[id] = {"type":"fish", "origin":players[id].position, "due":clock_time + 2.2}
+	_start_action(id, "GatherPlant", players[id].position + Basis(Vector3.UP, players[id].facing) * Vector3(0, 0, -1.2), 2.2)
+	_private_message(id, "Casting your line…")
 
 func inventory_action(item: String, action: String) -> void:
 	if is_authority(): _inventory_action(1, item, action)

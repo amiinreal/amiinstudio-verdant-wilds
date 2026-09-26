@@ -51,7 +51,7 @@ func enter_account(peer: int, account_id: String) -> Dictionary:
 	return {"id": stable}
 
 func public_delta() -> Dictionary:
-	return {"animals":data.get("animals",{}).duplicate(true),"tamed":data.get("tamed",{}).duplicate(true),"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true)}
+	return {"animals":data.get("animals",{}).duplicate(true),"tamed":data.get("tamed",{}).duplicate(true),"structures":data["structures"].duplicate(true),"resources":data["resources"].duplicate(true),"terrain_edits":data.get("terrain_edits",{}).duplicate(true),"grass_clearings":data.get("grass_clearings",{}).duplicate(true),"farmland":data.get("farmland",{}).duplicate(true)}
 
 func view(peer: int) -> Dictionary:
 	var p: Dictionary=profile(peer).duplicate(true)
@@ -211,21 +211,45 @@ func load_world(seed_value: int) -> bool:
 		for i in range(p["regions"].size()): p["regions"][i]=int(p["regions"][i])
 	return true
 
+## Settlement animals keep the original "cat_0".."cow_2" ids; the wider, procedurally
+## scattered population uses "cat_w12"-style ids instead of colliding with those.
+static func _valid_animal_id(key: String) -> bool:
+	for species: String in ["cat_", "dog_", "cow_"]:
+		if not key.begins_with(species): continue
+		var suffix: String = key.substr(species.length())
+		if suffix.is_valid_int(): return int(suffix) >= 0 and int(suffix) <= 2
+		return suffix.begins_with("w") and suffix.substr(1).is_valid_int() and int(suffix.substr(1)) >= 0 and int(suffix.substr(1)) < 200
+	return false
+
 static func valid_save(value: Variant, seed_value: int) -> bool:
 	if not value is Dictionary: return false
 	if value.get("schema")!=3 or value.get("seed")!=seed_value: return false
 	var animals: Variant = value.get("animals", {})
-	if not animals is Dictionary or animals.size() > 9: return false
+	if not animals is Dictionary or animals.size() > 260: return false
 	for key: Variant in animals:
-		if not key is String or not (key in ["cat_0", "cat_1", "cat_2", "dog_0", "dog_1", "dog_2", "cow_0", "cow_1", "cow_2"]): return false
-		if not (animals[key] is int or animals[key] is float) or not is_finite(float(animals[key])) or float(animals[key]) < 0 or float(animals[key]) > 100: return false
+		if not key is String or not _valid_animal_id(key): return false
+		if not (animals[key] is int or animals[key] is float) or not is_finite(float(animals[key])) or float(animals[key]) < 0 or float(animals[key]) > 180: return false
 	for key: String in ["profiles","resources","world"]:
 		if not value.get(key) is Dictionary: return false
 	var tamed: Variant = value.get("tamed", {})
-	if not tamed is Dictionary or tamed.size() > 9: return false
+	if not tamed is Dictionary or tamed.size() > 260: return false
 	for key: Variant in tamed:
-		if not key is String or not (key in ["cat_0", "cat_1", "cat_2", "dog_0", "dog_1", "dog_2"]): return false
+		if not key is String or not _valid_animal_id(key) or key.begins_with("cow_"): return false
 		if not tamed[key] is String or not value["profiles"].has(tamed[key]): return false
+	var farmland: Variant = value.get("farmland", {})
+	if not farmland is Dictionary or farmland.size() > 4000: return false
+	for key: Variant in farmland:
+		var plot: Variant = farmland[key]
+		if not key is String or not plot is Dictionary: return false
+		if not plot.get("crop","") in ["", "wheat", "carrot"]: return false
+		var progress: Variant = plot.get("progress", 0.0)
+		if not (progress is int or progress is float) or not is_finite(float(progress)) or float(progress) < 0 or float(progress) > 1: return false
+		var watered_until: Variant = plot.get("watered_until", 0.0)
+		if not (watered_until is int or watered_until is float) or not is_finite(float(watered_until)) or float(watered_until) < 0: return false
+		if not plot.get("owner") is String or not value["profiles"].has(plot["owner"]): return false
+		if not plot.get("p") is Array or plot["p"].size() != 3: return false
+		for n: Variant in plot["p"]:
+			if (not n is float and not n is int) or not is_finite(float(n)) or absf(float(n)) > 1024: return false
 	if not value.get("structures") is Array or value["structures"].size()>12000: return false
 	var edits: Variant=value.get("terrain_edits",{})
 	if not edits is Dictionary or edits.size()>66049: return false
@@ -269,7 +293,7 @@ static func valid_save(value: Variant, seed_value: int) -> bool:
 			if not p.get(key) is Array: return false
 		for key: String in ["wood","stone","fiber","planks","rope"]:
 			if not p["inventory"].has(key) or float(p["inventory"][key])<0: return false
-		for food: String in ["meat", "cooked_meat", "bone"]:
+		for food: String in ["meat", "cooked_meat", "bone", "carrot", "wheat", "wheat_seeds", "carrot_seeds", "river_fish", "salmon", "cooked_fish", "bread", "bucket", "water_bucket", "fishing_rod"]:
 			var amount: Variant = p["inventory"].get(food, 0)
 			if not (amount is int or amount is float) or not is_finite(float(amount)) or float(amount) < 0 or float(amount) != floorf(float(amount)): return false
 		for key: String in ["playtime","sessions","distance","resources_gathered","wood_gathered","stone_gathered","fiber_gathered","items_crafted","components_placed"]:
@@ -286,23 +310,30 @@ func _normalize_profiles() -> void:
 		for stat: String in ["tools_crafted","worlds_joined","multiplayer_sessions"]:
 			if not p["stats"].has(stat): p["stats"][stat]=0
 
+## A "rare" animal (procedurally rolled when it was scattered across the map) simply has
+## more health and yields a bonus, rather than being a different species -- no new assets
+## were needed for it.
+static func animal_max_health(animal: Node3D) -> int:
+	return int((100 if animal.species == "cow" else 50) * (1.8 if animal.get("rare") else 1.0))
+
 func hit_animal(peer: int, animal: Node3D, now: float) -> Dictionary:
 	var p: Dictionary = profile(peer)
 	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait for your next swing.")
 	if not data.has("animals"): data["animals"] = {}
-	var hp: int = int(data.animals.get(animal.animal_id, 100 if animal.species == "cow" else 50))
+	var hp: int = int(data.animals.get(animal.animal_id, animal_max_health(animal)))
 	if hp <= 0: return Build.fail("This animal is already gone.")
 	var tool_id: String = p.get("equipped", "hand")
 	if tool_id != "hand" and int(p.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
 	hp = maxi(0, hp - (30 if tool_id in ["axe", "pickaxe"] else 15))
 	data.animals[animal.animal_id] = hp
 	cooldowns[peer] = now + 0.5
+	var bonus: int = 2 if animal.get("rare") else 1
 	var result_text: String = animal.species.capitalize() + " hit · " + str(hp) + " health"
 	if hp == 0 and animal.species == "cow":
-		p.inventory["meat"] = int(p.inventory.get("meat", 0)) + 3
-		p.inventory["bone"] = int(p.inventory.get("bone", 0)) + 1
-		result_text = "Cow harvested · +3 meat, +1 bone added to Food in your inventory"
-	elif hp == 0: result_text = animal.species.capitalize() + " defeated."
+		p.inventory["meat"] = int(p.inventory.get("meat", 0)) + 3 * bonus
+		p.inventory["bone"] = int(p.inventory.get("bone", 0)) + 1 * bonus
+		result_text = ("Rare cow harvested · +" if animal.get("rare") else "Cow harvested · +") + str(3*bonus) + " meat, +" + str(bonus) + " bone added to Food in your inventory"
+	elif hp == 0: result_text = ("Rare " if animal.get("rare") else "") + animal.species.capitalize() + " defeated."
 	return {"ok":true, "reason":result_text}
 
 ## Cows are always a free, affectionate pet. Cats and dogs are wild until fed a bone
@@ -346,15 +377,94 @@ func inventory_action(peer: int, item: String, action: String, now: float) -> Di
 	var p: Dictionary = profile(peer)
 	if p.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait a moment.")
 	if action not in ["eat", "discard"] or int(p.inventory.get(item, 0)) < 1: return Build.fail("You do not have that item.")
+	const FOOD: Dictionary = {"cooked_meat":[40,20], "cooked_fish":[35,15], "bread":[30,10], "carrot":[15,0]}
 	if action == "eat":
-		if item != "cooked_meat": return Build.fail("Cook raw meat at a cooking fire first." if item == "meat" else "This item is not food.")
+		if not FOOD.has(item): return Build.fail("Cook it at a cooking fire first." if item in ["meat", "river_fish", "salmon"] else "This item is not food.")
 		if int(p.get("fullness", 50)) >= 100 and int(p.get("health", 100)) >= 100: return Build.fail("You are already full and healthy.")
-		p.fullness = mini(100, int(p.get("fullness", 50)) + 40)
-		p.health = mini(100, int(p.get("health", 100)) + 20)
+		p.fullness = mini(100, int(p.get("fullness", 50)) + FOOD[item][0])
+		p.health = mini(100, int(p.get("health", 100)) + FOOD[item][1])
 	p.inventory[item] = int(p.inventory[item]) - 1
 	if p.inventory[item] == 0 and p.get("equipped", "hand") == item: p.equipped = "hand"
 	cooldowns[peer] = now + 0.3
-	return {"ok":true, "reason":("Ate grilled meat · +40 food, +20 health" if action == "eat" else "Removed one " + item + " from inventory.")}
+	return {"ok":true, "reason":("Ate " + item.replace("_"," ") + " · +" + str(FOOD.get(item,[0,0])[0]) + " food, +" + str(FOOD.get(item,[0,0])[1]) + " health" if action == "eat" else "Removed one " + item + " from inventory.")}
+
+const WHEAT_SECONDS: float = 150.0
+const CARROT_SECONDS: float = 120.0
+const WATERED_SECONDS: float = 240.0
+
+## Growth is server-simulated only; clients just render the resulting progress/watered_until.
+## Dry soil still grows, just slower -- closer to Minecraft than an all-or-nothing gate.
+func tick_farms(delta: float, now: float) -> void:
+	if not data.has("farmland"): return
+	for plot: Dictionary in data.farmland.values():
+		var crop: String = str(plot.get("crop", ""))
+		if crop.is_empty(): continue
+		var seconds: float = WHEAT_SECONDS if crop == "wheat" else CARROT_SECONDS
+		var watered: bool = now < float(plot.get("watered_until", 0.0))
+		plot["progress"] = minf(1.0, float(plot.get("progress", 0.0)) + delta / seconds * (1.0 if watered else 0.4))
+
+## A single context-sensitive verb (till / plant / water / harvest / fill a bucket),
+## matching the "one key, read the situation" pattern already used for petting animals.
+func farm_action(peer: int, mode: String, plot_id: String, p: Vector3, actor: Vector3, world: Node3D, now: float) -> Dictionary:
+	var pr: Dictionary = profile(peer)
+	if pr.is_empty() or now < float(cooldowns.get(peer, 0)): return Build.fail("Wait a moment.")
+	if not data.has("farmland"): data["farmland"] = {}
+	if mode == "till":
+		if actor.distance_to(p) > 3.5: return Build.fail("Move closer to till this ground.")
+		for plot: Dictionary in data.farmland.values():
+			if Vector3(plot.p[0], plot.p[1], plot.p[2]).distance_to(p) < 1.1: return Build.fail("Soil is already tilled here.")
+		if data.farmland.size() >= 4000: return Build.fail("This world's farmland budget has been reached.")
+		if not preload("res://Adventure/animals/habitat.gd").clear_ground(world, Vector2(p.x, p.z), 0.6):
+			return Build.fail("This ground will not hold a farm plot. Try flatter, clearer soil away from water.")
+		var id: String = uid()
+		data.farmland[id] = {"id":id, "p":[p.x, p.y, p.z], "crop":"", "progress":0.0, "watered_until":0.0, "owner":pr.id}
+		cooldowns[peer] = now + 0.5
+		return {"ok":true, "reason":"Tilled a farm plot. Plant seeds, then water it."}
+	if mode == "fill_bucket":
+		if int(pr.inventory.get("bucket", 0)) < 1: return Build.fail("Craft a bucket first.")
+		if not world.near_water(actor): return Build.fail("Move to the water's edge to fill your bucket.")
+		pr.inventory["bucket"] = int(pr.inventory["bucket"]) - 1
+		pr.inventory["water_bucket"] = int(pr.inventory.get("water_bucket", 0)) + 1
+		cooldowns[peer] = now + 0.4
+		return {"ok":true, "reason":"Filled the bucket with water."}
+	var plot: Dictionary = data.farmland.get(plot_id, {})
+	if plot.is_empty(): return Build.fail("That plot is gone.")
+	if actor.distance_to(Vector3(plot.p[0], plot.p[1], plot.p[2])) > 3.5: return Build.fail("Move closer to the plot.")
+	if mode == "plant":
+		if not str(plot.get("crop", "")).is_empty(): return Build.fail("Something is already planted there.")
+		var seed_item: String = pr.get("equipped", "")
+		if seed_item not in ["wheat_seeds", "carrot_seeds"]: return Build.fail("Equip wheat or carrot seeds to plant.")
+		if int(pr.inventory.get(seed_item, 0)) < 1: return Build.fail("You do not have any " + seed_item.replace("_", " ") + ".")
+		pr.inventory[seed_item] = int(pr.inventory[seed_item]) - 1
+		plot.crop = seed_item.trim_suffix("_seeds"); plot.progress = 0.0
+		cooldowns[peer] = now + 0.4
+		return {"ok":true, "reason":"Planted " + str(plot.crop) + "."}
+	if mode == "water":
+		if int(pr.inventory.get("water_bucket", 0)) < 1: return Build.fail("Fill a bucket with water first (stand at the water's edge with a bucket equipped).")
+		pr.inventory["water_bucket"] = int(pr.inventory["water_bucket"]) - 1
+		pr.inventory["bucket"] = int(pr.inventory.get("bucket", 0)) + 1
+		plot.watered_until = now + WATERED_SECONDS
+		cooldowns[peer] = now + 0.4
+		return {"ok":true, "reason":"Watered the soil."}
+	if mode == "harvest":
+		if str(plot.get("crop", "")).is_empty() or float(plot.get("progress", 0.0)) < 1.0: return Build.fail("Nothing ripe to harvest there.")
+		var yield_item: String = plot.crop
+		pr.inventory[yield_item] = int(pr.inventory.get(yield_item, 0)) + (3 if yield_item == "wheat" else 2)
+		pr.inventory[yield_item + "_seeds"] = int(pr.inventory.get(yield_item + "_seeds", 0)) + 2
+		plot.crop = ""; plot.progress = 0.0
+		cooldowns[peer] = now + 0.3
+		return {"ok":true, "reason":"Harvested " + yield_item + " · +seeds for next planting"}
+	return Build.fail("Unknown farm action.")
+
+## Fish are a straight rarity roll, resolved the moment the cast (queued like gather/craft
+## in session.gd) comes due.
+func catch_fish(peer: int, now: float) -> Dictionary:
+	var p: Dictionary = profile(peer)
+	if p.is_empty(): return Build.fail("Not signed in.")
+	cooldowns[peer] = now + 0.6
+	var species: String = "salmon" if randf() < 0.15 else "river_fish"
+	p.inventory[species] = int(p.inventory.get(species, 0)) + 1
+	return {"ok":true, "reason":("A salmon! " if species == "salmon" else "Caught a river fish. ") + "+1 " + species.replace("_", " ")}
 
 func equip(peer: int,tool: String) -> Dictionary:
 	var p: Dictionary=profile(peer)

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://Adventure/recipe_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+recipe_id = "bread"
+display_name = "Bread"
+ingredients = {"wheat":3}
+result = "bread"
+quantity = 1
+craft_time = 3.0
+effect_type = "wood"

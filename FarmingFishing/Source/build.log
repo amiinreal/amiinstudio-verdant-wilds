@@ -1,0 +1,143 @@
+C:\Users\amiin\Documents\open-zeld\FarmingFishing\Source\build_assets.py:26: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+INFO Draco is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_draco_bridge.dll
+INFO MeshOptimizer is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_meshopt_bridge.dll
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_seeds_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.07181620597839355 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_stage_0_Mesh
+12:56:13 | INFO: Primitives created: 2
+12:56:13 | INFO: Finished glTF 2.0 export in 0.013080358505249023 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_stage_1_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.016889333724975586 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_stage_2_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.013409137725830078 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_stage_3_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.014888763427734375 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: carrot_harvest_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.013759136199951172 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: Stage_0_Mesh
+12:56:13 | INFO: Primitives created: 2
+12:56:13 | INFO: Extracting primitive: Stage_1_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Extracting primitive: Stage_2_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Extracting primitive: Stage_3_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.11032986640930176 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_seeds_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.00865483283996582 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_stage_0_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.009903907775878906 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_stage_1_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.008905172348022461 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_stage_2_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.01203012466430664 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_stage_3_Mesh
+12:56:13 | INFO: Primitives created: 2
+12:56:13 | INFO: Finished glTF 2.0 export in 0.014230728149414062 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: wheat_harvest_Mesh
+12:56:13 | INFO: Primitives created: 3
+12:56:13 | INFO: Finished glTF 2.0 export in 0.01491403579711914 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: Stage_0.001_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Extracting primitive: Stage_1.001_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Extracting primitive: Stage_2.001_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Extracting primitive: Stage_3.001_Mesh
+12:56:13 | INFO: Primitives created: 2
+12:56:13 | INFO: Finished glTF 2.0 export in 0.11353111267089844 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: farmland_dry_Mesh
+12:56:13 | INFO: Primitives created: 3
+12:56:13 | INFO: Finished glTF 2.0 export in 0.012006759643554688 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: farmland_wet_Mesh
+12:56:13 | INFO: Primitives created: 3
+12:56:13 | INFO: Finished glTF 2.0 export in 0.011413097381591797 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: irrigation_channel_Mesh
+12:56:13 | INFO: Primitives created: 3
+12:56:13 | INFO: Finished glTF 2.0 export in 0.012021303176879883 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: fishing_bobber_Mesh
+12:56:13 | INFO: Primitives created: 3
+12:56:13 | INFO: Finished glTF 2.0 export in 0.01202249526977539 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: fishing_hook_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.010787725448608398 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: fishing_rod_Mesh
+12:56:13 | INFO: Primitives created: 4
+12:56:13 | INFO: Finished glTF 2.0 export in 0.015462875366210938 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: landing_net_Mesh
+12:56:13 | INFO: Primitives created: 2
+12:56:13 | INFO: Finished glTF 2.0 export in 0.01304936408996582 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: river_fish_Mesh
+12:56:13 | INFO: Primitives created: 5
+12:56:13 | INFO: Extracting primitive: Tail_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.018908023834228516 s
+
+12:56:13 | INFO: Starting glTF 2.0 export
+12:56:13 | INFO: Extracting primitive: salmon_Mesh
+12:56:13 | INFO: Primitives created: 5
+12:56:13 | INFO: Extracting primitive: Tail.001_Mesh
+12:56:13 | INFO: Primitives created: 1
+12:56:13 | INFO: Finished glTF 2.0 export in 0.024046659469604492 s
+C:\Users\amiin\Documents\open-zeld\FarmingFishing\Source\build_assets.py:305: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world.use_nodes=True
+00:19.843  render           | Saved: 'C:\Users\amiin\Documents\open-zeld\FarmingFishing\asset_preview.png'
+
+Info: Saved as "field_and_stream.blend"
+ASSET_BUILD_OK 23
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+
+Blender quit

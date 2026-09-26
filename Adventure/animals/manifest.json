@@ -5,7 +5,7 @@
   "animals": [
     {
       "species": "cat",
-      "triangles": 17564,
+      "triangles": 24380,
       "bones": 21,
       "clips": [
         "idle",
@@ -13,11 +13,11 @@
         "trot",
         "sniff"
       ],
-      "bytes": 820440
+      "bytes": 1018808
     },
     {
       "species": "dog",
-      "triangles": 16898,
+      "triangles": 24206,
       "bones": 20,
       "clips": [
         "idle",
@@ -25,11 +25,11 @@
         "trot",
         "sniff"
       ],
-      "bytes": 755828
+      "bytes": 997436
     },
     {
       "species": "cow",
-      "triangles": 18220,
+      "triangles": 32128,
       "bones": 20,
       "clips": [
         "idle",
@@ -37,7 +37,7 @@
         "trot",
         "graze"
       ],
-      "bytes": 836744
+      "bytes": 1301576
     }
   ]
 }

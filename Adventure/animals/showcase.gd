@@ -52,7 +52,7 @@ func _ready() -> void:
 	add_child(camera)
 	camera.look_at(Vector3(0, 0.6, 0))
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 6.5
+	camera.size = 5.0
 	camera.make_current()
 	var help: Label = Label.new()
 	help.text = "VERDANT WILDS / WOODLAND COMPANIONS\n1 Idle   2 Walk   3 Trot   4 Sniff / Graze   Space Pause"

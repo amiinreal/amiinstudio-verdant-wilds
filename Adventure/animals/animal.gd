@@ -29,17 +29,22 @@ var tamed: bool = false
 var owner_id: String = ""
 var affection_time: float = 0.0
 var affection_label: Label3D
+## Rolled by population.gd for the wider, procedurally scattered population -- more health
+## and a bit larger, rather than a whole new species.
+var rare: bool = false
 
-func setup(kind: String, terrain: Node3D, a: Vector2, b: Vector2, offset: float) -> void:
+func setup(kind: String, terrain: Node3D, a: Vector2, b: Vector2, offset: float, is_rare: bool = false) -> void:
 	species = kind
 	world = terrain
 	start = a
 	finish = b
 	clock = offset
 	phase_offset = offset
-	health = 100 if kind == "cow" else 50
+	rare = is_rare
+	health = int((100 if kind == "cow" else 50) * (1.8 if rare else 1.0))
 	var model: Node3D = MODELS[kind].instantiate()
 	visual = model
+	if rare: visual.scale = Vector3.ONE * 1.18
 	add_child(model)
 	hitbox = Area3D.new()
 	hitbox.collision_layer = 8
