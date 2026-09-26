@@ -222,12 +222,35 @@ func open_page(value: String) -> void:
 	if page=="Inventory":
 		_inventory(content)
 	elif page=="Crafting":
-		content.add_child(label("Choose a recipe. Crafting takes time; move away to cancel.",14,Color("adc4b5")))
-		content.add_child(label("Cooking: stand beside a village cooking fire, or build one from Crafting in the build catalog.", 14))
-		for recipe: String in preload("res://Adventure/items.gd").recipes():
+		var crafting_card: VBoxContainer=card(content)
+		crafting_card.add_child(label("CRAFTING",11,Color("8fa38f")))
+		crafting_card.add_child(label("Crafting takes time; move away to cancel. Cooking recipes need a village cooking fire, or build one from the Build catalog.",13,Color("adc4b5")))
+		var recipe_grid: GridContainer=GridContainer.new(); recipe_grid.columns=3; recipe_grid.add_theme_constant_override("h_separation",12); recipe_grid.add_theme_constant_override("v_separation",12); content.add_child(recipe_grid)
+		var recipes: Dictionary=preload("res://Adventure/items.gd").recipes()
+		var inventory: Dictionary=profile.get("inventory",{})
+		for recipe: String in recipes:
 			var id: String=recipe
-			var data: Resource=preload("res://Adventure/items.gd").recipes()[id].data
-			button(("Cook " if data.required_station == "cooking_fire" else "Craft ")+data.display_name+" · "+str(data.ingredients)+" · "+str(data.craft_time)+" s"+(" · needs cooking fire" if data.required_station == "cooking_fire" else ""),func() -> void: session.craft(id); close_menu(),content)
+			var data: Resource=recipes[id].data
+			var can_afford: bool=true
+			for kind: String in data.ingredients:
+				if int(inventory.get(kind,0))<int(data.ingredients[kind]): can_afford=false
+			var panel: PanelContainer=PanelContainer.new(); panel.custom_minimum_size=Vector2(0,178)
+			panel.add_theme_stylebox_override("panel",style(Color(0.09,0.17,0.14,0.92),11)); recipe_grid.add_child(panel)
+			var box: VBoxContainer=VBoxContainer.new(); box.add_theme_constant_override("separation",6); panel.add_child(box)
+			var tile: PanelContainer=PanelContainer.new(); tile.custom_minimum_size=Vector2(0,64)
+			tile.add_theme_stylebox_override("panel",style(Color(0.13,0.24,0.16,0.9),8)); box.add_child(tile)
+			var icon: TextureRect=TextureRect.new(); icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(0,64); icon.texture=Items.icon(data.result); tile.add_child(icon)
+			box.add_child(label(data.display_name,15))
+			var cost_row: HBoxContainer=HBoxContainer.new(); cost_row.add_theme_constant_override("separation",8); box.add_child(cost_row)
+			for kind: String in data.ingredients:
+				var have_enough: bool=int(inventory.get(kind,0))>=int(data.ingredients[kind])
+				var cost_col: VBoxContainer=VBoxContainer.new(); cost_col.add_theme_constant_override("separation",0); cost_row.add_child(cost_col)
+				var cost_icon: TextureRect=TextureRect.new(); cost_icon.custom_minimum_size=Vector2(22,22); cost_icon.expand_mode=TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL; cost_icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; cost_icon.texture=Items.icon(kind); cost_col.add_child(cost_icon)
+				cost_col.add_child(label(str(data.ingredients[kind]),11,Color("bcd6c3") if have_enough else Color("e08a7a")))
+			box.add_child(label(("Cook" if data.required_station=="cooking_fire" else "Craft")+" · %.1f s" % data.craft_time+(" · needs fire" if data.required_station=="cooking_fire" else ""),11,Color("8fa38f")))
+			var craft_button: Button=button("Cook" if data.required_station=="cooking_fire" else "Craft",func() -> void: session.craft(id); close_menu(),box)
+			if not can_afford:
+				craft_button.disabled=true; craft_button.add_theme_stylebox_override("disabled",style(Color(0.1,0.08,0.08,0.85),9))
 
 	elif page=="Build":
 		var catalog: VBoxContainer=VBoxContainer.new(); catalog.set_script(preload("res://Adventure/build_catalog.gd")); content.add_child(catalog); catalog.setup(self)
@@ -357,17 +380,11 @@ func _process(delta: float) -> void:
 			var kind: String=session.world.resources[id].kind
 			var selected: String=Items.tool(session.local_player().equipped_tool).get("resource","")
 			_context=("LMB / Q · Gather "+kind) if kind==selected else ({"wood":"Tree · Select 1 Axe","stone":"Rock · Select 2 Pickaxe","fiber":"Plant · Select 6 Hands"}.get(kind,""))
-		elif is_instance_valid(session.world.farmland_view) and not session.world.farmland_view.nearest(session.local_player().position).is_empty():
-			var record: Dictionary=session.world.farmland_view.plots.get(session.world.farmland_view.nearest(session.local_player().position),{})
-			var crop: String=str(record.get("crop",""))
-			if crop.is_empty(): _context="F · Water soil" if str(session.local_profile.get("equipped",""))=="water_bucket" else "F · Plant seeds"
-			elif float(record.get("progress",0.0))>=1.0: _context="F · Harvest "+crop
-			else: _context="F · Water soil" if str(session.local_profile.get("equipped",""))=="water_bucket" else "Growing…"
-		elif session.world.near_water(session.local_player().position):
-			var equipped: String=str(session.local_profile.get("equipped",""))
-			_context="F · Cast your line" if equipped=="fishing_rod" else ("F · Fill bucket" if equipped=="bucket" else "Craft a bucket (Crafting tab) to collect water here")
-		else:
-			_context="F · Till soil"
+		elif game!=null and is_instance_valid(game.farm_target) and not game.farm_target.hint.is_empty():
+			# The crosshair raycast controller (farm_targeting.gd) already resolved exactly
+			# what F will do this frame, ghost tile and all -- reuse its hint verbatim so the
+			# on-screen text can never disagree with what's actually about to happen.
+			_context=game.farm_target.hint
 	_prompt.text=session.build_hint if not session.build_hint.is_empty() else _context
 	var actor: CharacterBody3D=session.local_player()
 	if actor!=null and actor._action>0 and actor._action_name.begins_with("Craft"):

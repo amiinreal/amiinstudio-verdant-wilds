@@ -870,6 +870,17 @@ func farm() -> void:
 	if mode == "till":
 		target = Vector3(roundf(aim.x), 0, roundf(aim.z))
 		target.y = world.height_at(Vector2(target.x, target.z))
+	farm_confirm(mode, plot_id, target)
+
+## Same action dispatch as farm(), but for a target already resolved elsewhere -- used by
+## the camera-crosshair raycast controller (Adventure/farm_targeting.gd), which recomputes
+## the target every frame (for the ghost) and just needs this to act on the latest one.
+func farm_confirm(mode: String, plot_id: String, target: Vector3) -> void:
+	if mode in ["", "none", "growing"]: return
+	if mode == "fish":
+		if is_authority(): _fish(1)
+		else: _fish_request.rpc_id(1)
+		return
 	if is_authority(): _farm(1, mode, plot_id, target)
 	else: _farm_request.rpc_id(1, mode, plot_id, target)
 

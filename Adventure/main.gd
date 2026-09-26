@@ -6,6 +6,7 @@ extends Node3D
 @onready var arm: SpringArm3D=$CameraRig/SpringArm3D
 @onready var overview: Camera3D=$Overview
 var builder: Node3D
+var farm_target: Node3D
 var music: AudioStreamPlayer
 var atmosphere: Node3D
 var camera_yaw: float=0
@@ -20,6 +21,7 @@ func _ready() -> void:
 	DisplayServer.window_set_title("The Verdant Wilds")
 	get_viewport().msaa_3d=Viewport.MSAA_2X
 	builder=Node3D.new(); builder.set_script(preload("res://Adventure/builder.gd")); builder.session=session; add_child(builder)
+	farm_target=Node3D.new(); farm_target.set_script(preload("res://Adventure/farm_targeting.gd")); farm_target.session=session; add_child(farm_target)
 	hud.bind_session(session); hud.game=self
 	hud.solo_requested.connect(session.start_solo); hud.host_requested.connect(session.host_game); hud.join_requested.connect(session.join_game)
 	hud.leave_requested.connect(session.stop); hud.build_requested.connect(_build_selected)
@@ -93,12 +95,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			if actor!=null: session.flatten_land(builder.candidate if builder.enabled and builder.ghost!=null and builder.ghost.visible else actor.position)
 		elif key==KEY_G or key==KEY_Q: session.gather()
 		elif key==KEY_T and not builder.enabled: session.pet_animal()
-		elif key==KEY_F and not builder.enabled: session.farm()
+		elif key==KEY_F and not builder.enabled: farm_target.confirm()
 		elif key==KEY_SPACE: _jump=true
 		elif key==KEY_DELETE and builder.enabled and session.has_method("remove_nearest"): session.remove_nearest()
 
 func _process(delta: float) -> void:
 	builder.update(camera,hud.blocks_movement())
+	farm_target.update(camera,hud.blocks_movement() or builder.enabled)
 	if not session.running:
 		_orbit+=delta*0.018
 		overview.position=Vector3(sin(_orbit)*30-50,38,cos(_orbit)*30+185)
