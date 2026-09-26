@@ -849,6 +849,11 @@ func farm() -> void:
 			mode = "water"
 		else:
 			message.emit("Still growing…"); return
+	elif not nearest_resource(id, false).is_empty():
+		# A wild tree/rock/plant is in reach and there is no farm context here -- F is a
+		# single "do the sensible thing" key, so fall through to the ordinary gather flow
+		# instead of trying (and failing) to till ground next to a resource node.
+		gather(); return
 	else:
 		mode = "till"
 	if is_authority(): _farm(1, mode, plot_id, body.position)

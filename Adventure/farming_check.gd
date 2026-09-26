@@ -42,6 +42,37 @@ func run() -> void:
 	check(spots.size() == 2, "found two tillable plots near spawn")
 	if spots.size() < 2: quit(1); return
 
+	var profile0: Dictionary = store.profile(1)
+	check(int(profile0.inventory.get("wheat_seeds", 0)) == 3 and int(profile0.inventory.get("carrot_seeds", 0)) == 3, "new players start with 3 wheat and 3 carrot seeds")
+
+	# Gathering fiber is a source of seeds too, not just crafting them.
+	var fiber_ids: Array[String] = []
+	for rid: String in world.resources:
+		if world.resources[rid].kind == "fiber": fiber_ids.append(rid)
+		if fiber_ids.size() >= 2: break
+	check(fiber_ids.size() >= 2, "at least two wild fiber plants exist on the map")
+	if fiber_ids.size() >= 1:
+		actor.position = world.resources[fiber_ids[0]].p
+		var seeds_before: int = int(profile0.inventory.get("wheat_seeds", 0)) + int(profile0.inventory.get("carrot_seeds", 0))
+		var fiber_result: Dictionary = store.gather(1, fiber_ids[0], actor.position, world, t); t += 1.0
+		var seeds_after: int = int(profile0.inventory.get("wheat_seeds", 0)) + int(profile0.inventory.get("carrot_seeds", 0))
+		check(fiber_result.ok and seeds_after == seeds_before + 2, "gathering a wild plant also yields 2 seeds: " + str(fiber_result.reason))
+
+	# An emptied equipped item (last seed planted, last bone fed) must never block gathering
+	# afterwards -- regression test for the "cannot harvest fiber or anything" bug.
+	profile0.inventory.wheat_seeds = 1
+	store.equip(1, "wheat_seeds")
+	var solo_till: Dictionary = store.farm_action(1, "till", "", spots[0], spots[0], world, t); t += 1.0
+	check(solo_till.ok, "till a throwaway plot for the equip-reset test")
+	var throwaway_plot: String = store.data.farmland.keys()[-1]
+	var solo_plant: Dictionary = store.farm_action(1, "plant", throwaway_plot, spots[0], spots[0], world, t); t += 1.0
+	check(solo_plant.ok and int(profile0.inventory.get("wheat_seeds", 0)) == 0 and str(profile0.get("equipped", "")) == "hand", "planting the last seed clears it from the hotbar automatically")
+	if fiber_ids.size() >= 2:
+		actor.position = world.resources[fiber_ids[1]].p
+		var after_reset: Dictionary = store.gather(1, fiber_ids[1], actor.position, world, t); t += 1.0
+		check(after_reset.ok, "gathering still works right after the equipped item ran out: " + str(after_reset.reason))
+	store.data.farmland.erase(throwaway_plot)
+
 	# Till (advancing the clock past each cooldown, exactly as real play would).
 	actor.position = spots[0]
 	var till_a: Dictionary = store.farm_action(1, "till", "", spots[0], actor.position, world, t); t += 1.0

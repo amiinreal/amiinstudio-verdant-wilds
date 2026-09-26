@@ -68,7 +68,10 @@ func gather(peer: int, resource_id: String, actor: Vector3, world: Node3D, now: 
 	if resource.is_empty(): return Build.fail("Unknown resource.")
 	var tool: Dictionary=Items.tool(p.get("equipped","hand"))
 	if resource["kind"]!="fiber" and tool.get("resource","")!=resource["kind"]: return Build.fail("Equip an axe for wood or a pickaxe for stone.")
-	if p.get("equipped","hand")!="hand" and int(p["inventory"].get(p["equipped"],0))<1: return Build.fail("You do not own the equipped tool.")
+	# Fiber is gatherable bare-handed, so a stale non-tool equip (an emptied seed stack,
+	# a used-up bucket) must never block it -- only the kinds that actually need a matching
+	# tool care whether the player still owns what's equipped.
+	if resource["kind"]!="fiber" and p.get("equipped","hand")!="hand" and int(p["inventory"].get(p["equipped"],0))<1: return Build.fail("You do not own the equipped tool.")
 	if actor.distance_to(resource["p"])>4.5: return Build.fail("Move closer to the resource.")
 	var ray: PhysicsRayQueryParameters3D=PhysicsRayQueryParameters3D.create(actor+Vector3.UP,resource["p"]+Vector3.UP*0.7,5)
 	if world.resource_colliders.has(resource_id): ray.exclude=[world.resource_colliders[resource_id].get_rid()]
@@ -83,7 +86,14 @@ func gather(peer: int, resource_id: String, actor: Vector3, world: Node3D, now: 
 	p["stats"]["resources_gathered"]+=amount
 	p["stats"][kind+"_gathered"]+=amount
 	derive(peer)
-	return {"ok":true,"reason":"Gathered %d %s" % [amount,kind]}
+	var seed_note: String = ""
+	if kind == "fiber":
+		# Wild plants are where seeds actually come from -- crafting them from fiber is
+		# the fallback, not the only source.
+		var seed_kind: String = "wheat_seeds" if randf() < 0.5 else "carrot_seeds"
+		p["inventory"][seed_kind] = int(p["inventory"].get(seed_kind, 0)) + 2
+		seed_note = " · +2 " + seed_kind.replace("_", " ")
+	return {"ok":true,"reason":"Gathered %d %s" % [amount,kind] + seed_note}
 
 func craft(peer: int, recipe: String, now: float) -> Dictionary:
 	var p: Dictionary=profile(peer)
@@ -125,6 +135,14 @@ static func afford(p: Dictionary, cost: Dictionary) -> bool:
 
 static func pay(p: Dictionary, cost: Dictionary) -> void:
 	for kind: String in cost: p["inventory"][kind]-=cost[kind]
+
+## Every place that consumes one of an equip-gated item (seeds, a full bucket, bone/meat)
+## must go through this, or an emptied stack leaves the player unable to equip anything
+## else useful -- and, since gather() also checks equipped-item ownership, unable to
+## gather with their bare hands either.
+static func _consume_equipped(p: Dictionary, item: String) -> void:
+	p["inventory"][item] = int(p["inventory"].get(item, 0)) - 1
+	if int(p["inventory"][item]) <= 0 and p.get("equipped", "hand") == item: p["equipped"] = "hand"
 
 func tick(peer: int, actor: Vector3, distance: float, delta: float, world: Node3D) -> void:
 	var p: Dictionary=profile(peer)
@@ -317,6 +335,8 @@ func _normalize_profiles() -> void:
 		if not p.has("health"): p["health"] = 100
 		for tool: String in ["axe","pickaxe","hammer"]:
 			if not p["inventory"].has(tool): p["inventory"][tool]=1
+		for seed: String in ["wheat_seeds","carrot_seeds"]:
+			if not p["inventory"].has(seed): p["inventory"][seed]=3
 		if not p.has("equipped"): p["equipped"]="axe"
 		for stat: String in ["tools_crafted","worlds_joined","multiplayer_sessions"]:
 			if not p["stats"].has(stat): p["stats"][stat]=0
@@ -334,7 +354,9 @@ func hit_animal(peer: int, animal: Node3D, now: float) -> Dictionary:
 	var hp: int = int(data.animals.get(animal.animal_id, animal_max_health(animal)))
 	if hp <= 0: return Build.fail("This animal is already gone.")
 	var tool_id: String = p.get("equipped", "hand")
-	if tool_id != "hand" and int(p.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
+	# Only axe/pickaxe change the outcome (30 vs 15 damage); anything else equipped hits
+	# like bare hands, so a stale non-combat equip (an emptied seed stack) must not block it.
+	if tool_id in ["axe", "pickaxe"] and int(p.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
 	hp = maxi(0, hp - (30 if tool_id in ["axe", "pickaxe"] else 15))
 	data.animals[animal.animal_id] = hp
 	cooldowns[peer] = now + 0.5
@@ -362,7 +384,7 @@ func interact_animal(peer: int, animal: Node3D) -> Dictionary:
 	var feed_item: String = p.get("equipped", "")
 	if feed_item not in ["bone", "meat"] or int(p.inventory.get(feed_item, 0)) < 1:
 		return {"ok":true, "reason":"This " + animal.species + " is wild. Equip a bone or meat, then press T to tame it.", "affection":false}
-	p.inventory[feed_item] = int(p.inventory[feed_item]) - 1
+	_consume_equipped(p, feed_item)
 	data.tamed[animal.animal_id] = p.id
 	return {"ok":true, "reason":animal.species.capitalize() + " is tamed! It will follow you now.", "tamed":true, "affection":true}
 
@@ -376,7 +398,7 @@ func hit_player(attacker: int, target: int, now: float) -> Dictionary:
 	var hp: int = int(target_profile.get("health", 100))
 	if hp <= 0: return Build.fail("They are already down.")
 	var tool_id: String = attacker_profile.get("equipped", "hand")
-	if tool_id != "hand" and int(attacker_profile.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
+	if tool_id in ["axe", "pickaxe"] and int(attacker_profile.inventory.get(tool_id, 0)) < 1: return Build.fail("You do not own that tool.")
 	hp = maxi(0, hp - (30 if tool_id in ["axe", "pickaxe"] else 15))
 	target_profile["health"] = hp
 	cooldowns[attacker] = now + 0.5
@@ -448,7 +470,7 @@ func farm_action(peer: int, mode: String, plot_id: String, p: Vector3, actor: Ve
 		var seed_item: String = pr.get("equipped", "")
 		if seed_item not in ["wheat_seeds", "carrot_seeds"]: return Build.fail("Equip wheat or carrot seeds to plant.")
 		if int(pr.inventory.get(seed_item, 0)) < 1: return Build.fail("You do not have any " + seed_item.replace("_", " ") + ".")
-		pr.inventory[seed_item] = int(pr.inventory[seed_item]) - 1
+		_consume_equipped(pr, seed_item)
 		plot.crop = seed_item.trim_suffix("_seeds"); plot.progress = 0.0
 		cooldowns[peer] = now + 0.4
 		return {"ok":true, "reason":"Planted " + str(plot.crop) + "."}
@@ -456,6 +478,8 @@ func farm_action(peer: int, mode: String, plot_id: String, p: Vector3, actor: Ve
 		if int(pr.inventory.get("water_bucket", 0)) < 1: return Build.fail("Fill a bucket with water first (stand at the water's edge with a bucket equipped).")
 		pr.inventory["water_bucket"] = int(pr.inventory["water_bucket"]) - 1
 		pr.inventory["bucket"] = int(pr.inventory.get("bucket", 0)) + 1
+		# The bucket itself isn't gone, just emptied -- keep it equipped instead of hand.
+		if pr.get("equipped", "hand") == "water_bucket": pr.equipped = "bucket"
 		plot.watered_until = now + WATERED_SECONDS
 		cooldowns[peer] = now + 0.4
 		return {"ok":true, "reason":"Watered the soil."}
